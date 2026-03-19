@@ -1,0 +1,36 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx @cloudflare/next-on-pages
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_NA_DB_ID: ${{ secrets.NOTION_NA_DB_ID }}
+          NOTION_IL_DB_ID: ${{ secrets.NOTION_IL_DB_ID }}
+          NOTION_GWANGYE_DB_ID: ${{ secrets.NOTION_GWANGYE_DB_ID }}
+          NOTION_BAEUM_DB_ID: ${{ secrets.NOTION_BAEUM_DB_ID }}
+          NOTION_GEONGANG_DB_ID: ${{ secrets.NOTION_GEONGANG_DB_ID }}
+          NOTION_GAJOK_DB_ID: ${{ secrets.NOTION_GAJOK_DB_ID }}
+          NOTION_GYEONGJE_DB_ID: ${{ secrets.NOTION_GYEONGJE_DB_ID }}
+          NOTION_IRUM_DB_ID: ${{ secrets.NOTION_IRUM_DB_ID }}
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy .vercel/output/static --project-name=ontology-dashboard
