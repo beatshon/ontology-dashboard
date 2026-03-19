@@ -77,10 +77,24 @@ function toRecord(page: PageObjectResponse): NotionRecord {
   };
 }
 
-export async function fetchAreaData(area: AreaConfig, limit = 5): Promise<AreaData> {
+function buildDateFilter(startDate?: string | null) {
+  if (!startDate) return undefined;
+  return {
+    timestamp: "created_time" as const,
+    created_time: { on_or_after: startDate },
+  };
+}
+
+export async function fetchAreaData(
+  area: AreaConfig,
+  limit = 5,
+  startDate?: string | null,
+): Promise<AreaData> {
   const notion = getClient();
   const dbId = process.env[area.dbEnvKey];
   if (!dbId) return { area, records: [], total: 0 };
+
+  const filter = buildDateFilter(startDate);
 
   try {
     const [recent, all] = await Promise.all([
@@ -88,8 +102,13 @@ export async function fetchAreaData(area: AreaConfig, limit = 5): Promise<AreaDa
         database_id: dbId,
         sorts: [{ timestamp: "created_time", direction: "descending" }],
         page_size: limit,
+        ...(filter ? { filter } : {}),
       }),
-      notion.databases.query({ database_id: dbId, page_size: 100 }),
+      notion.databases.query({
+        database_id: dbId,
+        page_size: 100,
+        ...(filter ? { filter } : {}),
+      }),
     ]);
 
     const records = (recent.results as PageObjectResponse[]).map(toRecord);
@@ -126,16 +145,22 @@ export async function fetchAllAreaRecords(area: AreaConfig): Promise<NotionRecor
   }
 }
 
-export async function fetchAchievements(limit = 20): Promise<Achievement[]> {
+export async function fetchAchievements(
+  limit = 20,
+  startDate?: string | null,
+): Promise<Achievement[]> {
   const notion = getClient();
   const dbId = process.env.NOTION_IRUM_DB_ID;
   if (!dbId) return [];
+
+  const filter = buildDateFilter(startDate);
 
   try {
     const res = await notion.databases.query({
       database_id: dbId,
       sorts: [{ timestamp: "created_time", direction: "descending" }],
       page_size: limit,
+      ...(filter ? { filter } : {}),
     });
 
     return (res.results as PageObjectResponse[]).map((page) => ({

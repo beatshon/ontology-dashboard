@@ -1,8 +1,11 @@
 export const runtime = "edge";
 
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AREAS, fetchAllAreaRecords } from "@/lib/notion";
+import PeriodFilter, { getDateRange } from "@/components/PeriodFilter";
+import type { PeriodKey } from "@/components/PeriodFilter";
 import type { NotionRecord } from "@/types";
 
 export const revalidate = 300;
@@ -26,17 +29,32 @@ function groupByMonth(records: NotionRecord[]): Map<string, NotionRecord[]> {
   return groups;
 }
 
+function filterByDate(records: NotionRecord[], startDate: string | null): NotionRecord[] {
+  if (!startDate) return records;
+  const start = new Date(startDate).getTime();
+  return records.filter((r) => {
+    const d = new Date(r.date || r.createdAt).getTime();
+    return d >= start;
+  });
+}
+
 export default async function AreaDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ key: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { key: rawKey } = await params;
+  const [{ key: rawKey }, sp] = await Promise.all([params, searchParams]);
   const decodedKey = decodeURIComponent(rawKey);
   const area = AREAS.find((a) => a.key === decodedKey);
   if (!area) notFound();
 
-  const records = await fetchAllAreaRecords(area);
+  const period = (sp.period as PeriodKey) || "all";
+  const { start } = getDateRange(period);
+
+  const allRecords = await fetchAllAreaRecords(area);
+  const records = filterByDate(allRecords, start);
   const grouped = groupByMonth(records);
 
   return (
@@ -53,7 +71,9 @@ export default async function AreaDetailPage({
           <span className="text-3xl">{area.emoji}</span>
           <div>
             <h1 className="text-2xl font-bold text-white">{area.label}</h1>
-            <p className="text-sm text-[#555]">총 {records.length}개 기록</p>
+            <p className="text-sm text-[#555]">
+              {start ? `${records.length}개 (전체 ${allRecords.length}개)` : `총 ${records.length}개 기록`}
+            </p>
           </div>
         </div>
         <div
@@ -62,10 +82,19 @@ export default async function AreaDetailPage({
         />
       </div>
 
+      {/* 기간 필터 */}
+      <div className="mb-6">
+        <Suspense>
+          <PeriodFilter />
+        </Suspense>
+      </div>
+
       {/* 월별 타임라인 */}
       {records.length === 0 ? (
         <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-10 text-center">
-          <p className="text-[#444]">아직 기록이 없어요</p>
+          <p className="text-[#444]">
+            {start ? "이 기간에 기록이 없어요" : "아직 기록이 없어요"}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-8">

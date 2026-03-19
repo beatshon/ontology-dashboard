@@ -1,17 +1,28 @@
 export const runtime = "edge";
 
+import { Suspense } from "react";
 import { AREAS, fetchAreaData, fetchAchievements } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import BalanceRadar from "@/components/BalanceRadar";
 import AreaCard from "@/components/AreaCard";
 import AchievementGallery from "@/components/AchievementGallery";
+import PeriodFilter, { getDateRange } from "@/components/PeriodFilter";
+import type { PeriodKey } from "@/components/PeriodFilter";
 
-export const revalidate = 300; // 5분마다 갱신
+export const revalidate = 300;
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const period = (params.period as PeriodKey) || "all";
+  const { start } = getDateRange(period);
+
   const [areasData, achievements] = await Promise.all([
-    Promise.all(AREAS.map((a) => fetchAreaData(a, 5))),
-    fetchAchievements(20),
+    Promise.all(AREAS.map((a) => fetchAreaData(a, 5, start))),
+    fetchAchievements(20, start),
   ]);
 
   const stats = areasData.map((d) => ({
@@ -39,6 +50,13 @@ export default async function Dashboard() {
           <p className="text-[#555] mt-1 text-sm">제이스의 삶의 기록</p>
         </div>
         <span className="text-xs text-[#444]">{now}</span>
+      </div>
+
+      {/* 기간 필터 */}
+      <div className="mb-6">
+        <Suspense>
+          <PeriodFilter />
+        </Suspense>
       </div>
 
       {/* Stats 차트 + 레이더 차트 */}
