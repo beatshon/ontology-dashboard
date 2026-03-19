@@ -1,8 +1,16 @@
 export const runtime = "edge";
 
-import { AREAS, fetchAreaData, fetchAchievements } from "@/lib/notion";
+import {
+  AREAS,
+  fetchAreaData,
+  fetchAchievements,
+  fetchWeeklyTrend,
+  fetchMonthlyRecordCounts,
+} from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import BalanceRadar from "@/components/BalanceRadar";
+import TrendChart from "@/components/TrendChart";
+import GoalProgress from "@/components/GoalProgress";
 import AreaCard from "@/components/AreaCard";
 import AchievementGallery from "@/components/AchievementGallery";
 import PeriodFilter, { getDateRange } from "@/components/PeriodFilter";
@@ -19,9 +27,11 @@ export default async function Dashboard({
   const period = (params.period as PeriodKey) || "all";
   const { start } = getDateRange(period);
 
-  const [areasData, achievements] = await Promise.all([
+  const [areasData, achievements, trend, monthlyCounts] = await Promise.all([
     Promise.all(AREAS.map((a) => fetchAreaData(a, 5, start))),
     fetchAchievements(20, start),
+    fetchWeeklyTrend(12),
+    fetchMonthlyRecordCounts(),
   ]);
 
   const stats = areasData.map((d) => ({
@@ -60,6 +70,14 @@ export default async function Dashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <StatsChart stats={stats} />
         <BalanceRadar stats={stats} />
+      </div>
+
+      {/* 트렌드 차트 + 목표 프로그레스 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <div className="lg:col-span-2">
+          <TrendChart data={trend} />
+        </div>
+        <GoalProgress areasData={areasData} monthlyRecordCounts={monthlyCounts} />
       </div>
 
       {/* 영역 카드 그리드 */}

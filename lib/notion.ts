@@ -145,6 +145,105 @@ export async function fetchAllAreaRecords(area: AreaConfig): Promise<NotionRecor
   }
 }
 
+export async function fetchMonthlyRecordCounts(): Promise<Record<string, number>> {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+
+  const counts: Record<string, number> = {};
+
+  await Promise.all(
+    AREAS.map(async (area) => {
+      const notion = getClient();
+      const dbId = process.env[area.dbEnvKey];
+      if (!dbId) {
+        counts[area.key] = 0;
+        return;
+      }
+      try {
+        const res = await notion.databases.query({
+          database_id: dbId,
+          filter: { timestamp: "created_time", created_time: { on_or_after: startOfMonth } },
+          page_size: 100,
+        });
+        counts[area.key] = res.results.length;
+      } catch {
+        counts[area.key] = 0;
+      }
+    }),
+  );
+
+  return counts;
+}
+
+export interface WeeklyCount {
+  week: string; // "MM/DD" format (week start)
+  [areaKey: string]: number | string;
+}
+
+export async function fetchWeeklyTrend(weeks = 12): Promise<WeeklyCount[]> {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(now.getDate() - weeks * 7);
+  const startStr = startDate.toISOString().split("T")[0];
+
+  const allCounts = await Promise.all(
+    AREAS.map(async (area) => {
+      const notion = getClient();
+      const dbId = process.env[area.dbEnvKey];
+      if (!dbId) return { key: area.key, dates: [] as string[] };
+
+      try {
+        const res = await notion.databases.query({
+          database_id: dbId,
+          filter: { timestamp: "created_time", created_time: { on_or_after: startStr } },
+          page_size: 100,
+        });
+        const dates = (res.results as PageObjectResponse[]).map((p) => p.created_time);
+        return { key: area.key, dates };
+      } catch {
+        return { key: area.key, dates: [] as string[] };
+      }
+    }),
+  );
+
+  // Build week buckets
+  const weekStarts: Date[] = [];
+  const cursor = new Date(startDate);
+  const day = cursor.getDay();
+  cursor.setDate(cursor.getDate() - (day === 0 ? 6 : day - 1)); // Monday
+  cursor.setHours(0, 0, 0, 0);
+
+  while (cursor <= now) {
+    weekStarts.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  const result: WeeklyCount[] = weekStarts.map((ws) => {
+    const label = `${ws.getMonth() + 1}/${ws.getDate()}`;
+    const row: WeeklyCount = { week: label };
+    for (const area of AREAS) {
+      row[area.key] = 0;
+    }
+    return row;
+  });
+
+  for (const { key, dates } of allCounts) {
+    for (const dateStr of dates) {
+      const d = new Date(dateStr);
+      for (let i = weekStarts.length - 1; i >= 0; i--) {
+        if (d >= weekStarts[i]) {
+          (result[i][key] as number) += 1;
+          break;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 export async function fetchAchievements(
   limit = 20,
   startDate?: string | null,
