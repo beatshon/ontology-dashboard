@@ -1,7 +1,3 @@
-"use client";
-
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
 const PERIODS = [
   { key: "week", label: "이번 주" },
   { key: "month", label: "이번 달" },
@@ -36,38 +32,31 @@ export function getDateRange(period: PeriodKey): { start: string | null } {
   return { start: start.toISOString().split("T")[0] };
 }
 
-export default function PeriodFilter() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const current = (searchParams.get("period") as PeriodKey) || "all";
+interface Props {
+  current: PeriodKey;
+  basePath?: string;
+}
 
-  function handleClick(key: PeriodKey) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (key === "all") {
-      params.delete("period");
-    } else {
-      params.set("period", key);
-    }
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-  }
-
+export default function PeriodFilter({ current, basePath = "/" }: Props) {
   return (
     <div className="flex gap-1.5 flex-wrap">
-      {PERIODS.map(({ key, label }) => (
-        <button
-          key={key}
-          onClick={() => handleClick(key)}
-          className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-            current === key
-              ? "bg-[#333] text-white"
-              : "bg-[#1a1a1a] text-[#666] hover:text-[#999] hover:bg-[#222]"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
+      {PERIODS.map(({ key, label }) => {
+        const href =
+          key === "all" ? basePath : `${basePath}?period=${key}`;
+        return (
+          <a
+            key={key}
+            href={href}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+              current === key
+                ? "bg-[#333] text-white"
+                : "bg-[#1a1a1a] text-[#666] hover:text-[#999] hover:bg-[#222]"
+            }`}
+          >
+            {label}
+          </a>
+        );
+      })}
     </div>
   );
 }

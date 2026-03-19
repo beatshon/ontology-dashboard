@@ -1,6 +1,5 @@
 export const runtime = "edge";
 
-import { Suspense } from "react";
 import { AREAS, fetchAreaData, fetchAchievements } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import BalanceRadar from "@/components/BalanceRadar";
@@ -54,9 +53,7 @@ export default async function Dashboard({
 
       {/* 기간 필터 */}
       <div className="mb-6">
-        <Suspense>
-          <PeriodFilter />
-        </Suspense>
+        <PeriodFilter current={period} basePath="/" />
       </div>
 
       {/* Stats 차트 + 레이더 차트 */}

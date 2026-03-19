@@ -1,6 +1,5 @@
 export const runtime = "edge";
 
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AREAS, fetchAllAreaRecords } from "@/lib/notion";
@@ -84,9 +83,7 @@ export default async function AreaDetailPage({
 
       {/* 기간 필터 */}
       <div className="mb-6">
-        <Suspense>
-          <PeriodFilter />
-        </Suspense>
+        <PeriodFilter current={period} basePath={`/area/${encodeURIComponent(area.key)}`} />
       </div>
 
       {/* 월별 타임라인 */}
