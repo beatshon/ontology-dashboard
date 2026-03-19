@@ -2,6 +2,7 @@ export const runtime = "edge";
 
 import { AREAS, fetchAreaData, fetchAchievements } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
+import BalanceRadar from "@/components/BalanceRadar";
 import AreaCard from "@/components/AreaCard";
 import AchievementGallery from "@/components/AchievementGallery";
 
@@ -40,9 +41,10 @@ export default async function Dashboard() {
         <span className="text-xs text-[#444]">{now}</span>
       </div>
 
-      {/* Stats 차트 */}
-      <div className="mb-8">
+      {/* Stats 차트 + 레이더 차트 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <StatsChart stats={stats} />
+        <BalanceRadar stats={stats} />
       </div>
 
       {/* 영역 카드 그리드 */}

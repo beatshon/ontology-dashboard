@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AreaData } from "@/types";
 
 function formatDate(dateStr?: string) {
@@ -10,8 +11,9 @@ export default function AreaCard({ data }: { data: AreaData }) {
   const { area, records, total } = data;
 
   return (
-    <div
-      className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-5 flex flex-col gap-4 hover:border-[#3a3a3a] transition-colors"
+    <Link
+      href={`/area/${encodeURIComponent(area.key)}`}
+      className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-5 flex flex-col gap-4 hover:border-[#3a3a3a] transition-colors block"
       style={{ borderTopColor: area.color, borderTopWidth: 2 }}
     >
       <div className="flex items-center justify-between">
@@ -51,6 +53,6 @@ export default function AreaCard({ data }: { data: AreaData }) {
           ))
         )}
       </div>
-    </div>
+    </Link>
   );
 }

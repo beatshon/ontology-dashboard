@@ -47,6 +47,7 @@ function extractSelect(page: PageObjectResponse, key: string): string | undefine
   const prop = page.properties[key];
   if (!prop) return undefined;
   if (prop.type === "select") return prop.select?.name || undefined;
+  if (prop.type === "multi_select") return prop.multi_select.map((s) => s.name).join(", ") || undefined;
   return undefined;
 }
 
@@ -95,6 +96,33 @@ export async function fetchAreaData(area: AreaConfig, limit = 5): Promise<AreaDa
     return { area, records, total: all.results.length };
   } catch {
     return { area, records: [], total: 0 };
+  }
+}
+
+export async function fetchAllAreaRecords(area: AreaConfig): Promise<NotionRecord[]> {
+  const notion = getClient();
+  const dbId = process.env[area.dbEnvKey];
+  if (!dbId) return [];
+
+  try {
+    const records: NotionRecord[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const res = await notion.databases.query({
+        database_id: dbId,
+        sorts: [{ timestamp: "created_time", direction: "descending" }],
+        page_size: 100,
+        start_cursor: cursor,
+      });
+
+      records.push(...(res.results as PageObjectResponse[]).map(toRecord));
+      cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
+    } while (cursor);
+
+    return records;
+  } catch {
+    return [];
   }
 }
 
