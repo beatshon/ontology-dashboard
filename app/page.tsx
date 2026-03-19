@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import { AREAS, fetchAreaData, fetchAchievements } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import AreaCard from "@/components/AreaCard";
