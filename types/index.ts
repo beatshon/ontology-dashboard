@@ -42,3 +42,24 @@ export interface DashboardData {
   achievements: Achievement[];
   stats: { area: string; emoji: string; count: number; color: string }[];
 }
+
+export interface SentimentRecord {
+  date: string;
+  label: "긍정" | "부정" | "중립";
+  intensity: number;
+  emotion: string;
+  area: string;
+  title: string;
+}
+
+export interface RelationNode {
+  name: string;
+  count: number;
+  lastContact: string;
+}
+
+export interface AchievementTrend {
+  week: string;
+  points: number;
+  count: number;
+}

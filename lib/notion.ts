@@ -1,6 +1,6 @@
 import { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import type { AreaConfig, AreaData, Achievement, NotionRecord } from "@/types";
+import type { AreaConfig, AreaData, Achievement, NotionRecord, SentimentRecord, RelationNode, AchievementTrend } from "@/types";
 
 export const AREAS: AreaConfig[] = [
   { key: "나", label: "나 (Me)", emoji: "🌱", color: "#4ade80", dbEnvKey: "NOTION_NA_DB_ID" },
@@ -373,6 +373,152 @@ export async function fetchDailyHeatmap(days = 365): Promise<DailyCount[]> {
   }
 
   return result;
+}
+
+// ── 감정 흐름 데이터 ─────────────────────────────────────────────
+
+export async function fetchSentimentTrend(days = 30): Promise<SentimentRecord[]> {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(now.getDate() - days);
+  const startStr = startDate.toISOString().split("T")[0];
+
+  const records: SentimentRecord[] = [];
+
+  await Promise.all(
+    AREAS.map(async (area) => {
+      const notion = getClient();
+      const dbId = process.env[area.dbEnvKey];
+      if (!dbId) return;
+
+      try {
+        const res = await notion.databases.query({
+          database_id: dbId,
+          filter: { timestamp: "created_time", created_time: { on_or_after: startStr } },
+          sorts: [{ timestamp: "created_time", direction: "ascending" }],
+          page_size: 100,
+        });
+
+        for (const page of res.results as PageObjectResponse[]) {
+          const label = extractSelect(page, "감정");
+          if (!label) continue;
+          const intensity = extractNumber(page, "감정 강도") ?? 3;
+          const emotion = extractText(page, "감정 상세") ?? "";
+          records.push({
+            date: page.created_time.split("T")[0],
+            label: label as SentimentRecord["label"],
+            intensity,
+            emotion,
+            area: area.key,
+            title: extractTitle(page),
+          });
+        }
+      } catch {
+        // skip
+      }
+    }),
+  );
+
+  records.sort((a, b) => a.date.localeCompare(b.date));
+  return records;
+}
+
+// ── 관계 네트워크 데이터 ─────────────────────────────────────────
+
+export async function fetchRelationNetwork(): Promise<RelationNode[]> {
+  const notion = getClient();
+  const dbId = process.env.NOTION_GWANGYE_DB_ID;
+  if (!dbId) return [];
+
+  try {
+    let cursor: string | undefined;
+    const peopleMap: Record<string, { count: number; lastContact: string }> = {};
+
+    do {
+      const res = await notion.databases.query({
+        database_id: dbId,
+        sorts: [{ timestamp: "created_time", direction: "descending" }],
+        page_size: 100,
+        start_cursor: cursor,
+      });
+
+      for (const page of res.results as PageObjectResponse[]) {
+        const name = extractTitle(page);
+        if (!name || name === "제목 없음") continue;
+        const created = page.created_time.split("T")[0];
+        if (!peopleMap[name]) {
+          peopleMap[name] = { count: 0, lastContact: created };
+        }
+        peopleMap[name].count += 1;
+        if (created > peopleMap[name].lastContact) {
+          peopleMap[name].lastContact = created;
+        }
+      }
+      cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
+    } while (cursor);
+
+    return Object.entries(peopleMap)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+// ── 이룸 포인트 트렌드 ──────────────────────────────────────────
+
+export async function fetchAchievementTrend(weeks = 12): Promise<AchievementTrend[]> {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(now.getDate() - weeks * 7);
+  const startStr = startDate.toISOString().split("T")[0];
+
+  const notion = getClient();
+  const dbId = process.env.NOTION_IRUM_DB_ID;
+  if (!dbId) return [];
+
+  try {
+    const res = await notion.databases.query({
+      database_id: dbId,
+      filter: { timestamp: "created_time", created_time: { on_or_after: startStr } },
+      sorts: [{ timestamp: "created_time", direction: "ascending" }],
+      page_size: 100,
+    });
+
+    // Build week buckets
+    const weekStarts: Date[] = [];
+    const cur = new Date(startDate);
+    const day = cur.getDay();
+    cur.setDate(cur.getDate() - (day === 0 ? 6 : day - 1));
+    cur.setHours(0, 0, 0, 0);
+
+    while (cur <= now) {
+      weekStarts.push(new Date(cur));
+      cur.setDate(cur.getDate() + 7);
+    }
+
+    const result: AchievementTrend[] = weekStarts.map((ws) => ({
+      week: `${ws.getMonth() + 1}/${ws.getDate()}`,
+      points: 0,
+      count: 0,
+    }));
+
+    for (const page of res.results as PageObjectResponse[]) {
+      const d = new Date(page.created_time);
+      const points = extractNumber(page, "포인트") ?? 1;
+      for (let i = weekStarts.length - 1; i >= 0; i--) {
+        if (d >= weekStarts[i]) {
+          result[i].points += points;
+          result[i].count += 1;
+          break;
+        }
+      }
+    }
+
+    return result;
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchAchievements(

@@ -8,6 +8,9 @@ import {
   fetchMonthlyRecordCounts,
   fetchDailyHeatmap,
   fetchMonthlyComparison,
+  fetchSentimentTrend,
+  fetchRelationNetwork,
+  fetchAchievementTrend,
 } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import BalanceRadar from "@/components/BalanceRadar";
@@ -18,6 +21,9 @@ import AchievementGallery from "@/components/AchievementGallery";
 import Heatmap from "@/components/Heatmap";
 import MonthlyComparisonChart from "@/components/MonthlyComparison";
 import PeriodFilter, { getDateRange } from "@/components/PeriodFilter";
+import SentimentChart from "@/components/SentimentChart";
+import RelationNetwork from "@/components/RelationNetwork";
+import AchievementTrendChart from "@/components/AchievementTrend";
 import type { PeriodKey } from "@/components/PeriodFilter";
 
 export const revalidate = 300;
@@ -31,13 +37,26 @@ export default async function Dashboard({
   const period = (params.period as PeriodKey) || "all";
   const { start } = getDateRange(period);
 
-  const [areasData, achievements, trend, monthlyCounts, heatmapData, monthlyComparison] = await Promise.all([
+  const [
+    areasData,
+    achievements,
+    trend,
+    monthlyCounts,
+    heatmapData,
+    monthlyComparison,
+    sentimentData,
+    relationData,
+    achievementTrend,
+  ] = await Promise.all([
     Promise.all(AREAS.map((a) => fetchAreaData(a, 5, start))),
     fetchAchievements(20, start),
     fetchWeeklyTrend(12),
     fetchMonthlyRecordCounts(),
     fetchDailyHeatmap(365),
     fetchMonthlyComparison(),
+    fetchSentimentTrend(30),
+    fetchRelationNetwork(),
+    fetchAchievementTrend(12),
   ]);
 
   const stats = areasData.map((d) => ({
@@ -86,8 +105,15 @@ export default async function Dashboard({
         <GoalProgress areasData={areasData} monthlyRecordCounts={monthlyCounts} />
       </div>
 
-      {/* 월간 비교 */}
-      <div className="mb-8">
+      {/* 감정 흐름 + 관계 네트워크 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <SentimentChart data={sentimentData} />
+        <RelationNetwork data={relationData} />
+      </div>
+
+      {/* 이룸 포인트 트렌드 + 월간 비교 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <AchievementTrendChart data={achievementTrend} />
         <MonthlyComparisonChart data={monthlyComparison} />
       </div>
 
