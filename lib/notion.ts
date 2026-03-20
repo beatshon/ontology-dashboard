@@ -244,6 +244,137 @@ export async function fetchWeeklyTrend(weeks = 12): Promise<WeeklyCount[]> {
   return result;
 }
 
+export interface MonthlyComparison {
+  area: string;
+  emoji: string;
+  color: string;
+  thisMonth: number;
+  lastMonth: number;
+}
+
+export async function fetchMonthlyComparison(): Promise<MonthlyComparison[]> {
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    .toISOString()
+    .split("T")[0];
+
+  const result: MonthlyComparison[] = [];
+
+  await Promise.all(
+    AREAS.map(async (area) => {
+      const notion = getClient();
+      const dbId = process.env[area.dbEnvKey];
+      if (!dbId) {
+        result.push({
+          area: area.key,
+          emoji: area.emoji,
+          color: area.color,
+          thisMonth: 0,
+          lastMonth: 0,
+        });
+        return;
+      }
+
+      try {
+        const [thisRes, lastRes] = await Promise.all([
+          notion.databases.query({
+            database_id: dbId,
+            filter: { timestamp: "created_time", created_time: { on_or_after: thisMonthStart } },
+            page_size: 100,
+          }),
+          notion.databases.query({
+            database_id: dbId,
+            filter: {
+              and: [
+                { timestamp: "created_time", created_time: { on_or_after: lastMonthStart } },
+                { timestamp: "created_time", created_time: { before: thisMonthStart } },
+              ],
+            },
+            page_size: 100,
+          }),
+        ]);
+
+        result.push({
+          area: area.key,
+          emoji: area.emoji,
+          color: area.color,
+          thisMonth: thisRes.results.length,
+          lastMonth: lastRes.results.length,
+        });
+      } catch {
+        result.push({
+          area: area.key,
+          emoji: area.emoji,
+          color: area.color,
+          thisMonth: 0,
+          lastMonth: 0,
+        });
+      }
+    }),
+  );
+
+  return result;
+}
+
+export interface DailyCount {
+  date: string; // "YYYY-MM-DD"
+  count: number;
+}
+
+export async function fetchDailyHeatmap(days = 365): Promise<DailyCount[]> {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(now.getDate() - days);
+  const startStr = startDate.toISOString().split("T")[0];
+
+  const allDates: string[] = [];
+
+  await Promise.all(
+    AREAS.map(async (area) => {
+      const notion = getClient();
+      const dbId = process.env[area.dbEnvKey];
+      if (!dbId) return;
+
+      try {
+        let cursor: string | undefined;
+        do {
+          const res = await notion.databases.query({
+            database_id: dbId,
+            filter: { timestamp: "created_time", created_time: { on_or_after: startStr } },
+            page_size: 100,
+            start_cursor: cursor,
+          });
+          for (const page of res.results as PageObjectResponse[]) {
+            allDates.push(page.created_time.split("T")[0]);
+          }
+          cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
+        } while (cursor);
+      } catch {
+        // skip
+      }
+    }),
+  );
+
+  const countMap: Record<string, number> = {};
+  for (const d of allDates) {
+    countMap[d] = (countMap[d] || 0) + 1;
+  }
+
+  // Fill all days in range
+  const result: DailyCount[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= now) {
+    const key = cursor.toISOString().split("T")[0];
+    result.push({ date: key, count: countMap[key] || 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return result;
+}
+
 export async function fetchAchievements(
   limit = 20,
   startDate?: string | null,

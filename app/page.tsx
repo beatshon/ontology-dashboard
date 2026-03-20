@@ -6,6 +6,8 @@ import {
   fetchAchievements,
   fetchWeeklyTrend,
   fetchMonthlyRecordCounts,
+  fetchDailyHeatmap,
+  fetchMonthlyComparison,
 } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import BalanceRadar from "@/components/BalanceRadar";
@@ -13,6 +15,8 @@ import TrendChart from "@/components/TrendChart";
 import GoalProgress from "@/components/GoalProgress";
 import AreaCard from "@/components/AreaCard";
 import AchievementGallery from "@/components/AchievementGallery";
+import Heatmap from "@/components/Heatmap";
+import MonthlyComparisonChart from "@/components/MonthlyComparison";
 import PeriodFilter, { getDateRange } from "@/components/PeriodFilter";
 import type { PeriodKey } from "@/components/PeriodFilter";
 
@@ -27,11 +31,13 @@ export default async function Dashboard({
   const period = (params.period as PeriodKey) || "all";
   const { start } = getDateRange(period);
 
-  const [areasData, achievements, trend, monthlyCounts] = await Promise.all([
+  const [areasData, achievements, trend, monthlyCounts, heatmapData, monthlyComparison] = await Promise.all([
     Promise.all(AREAS.map((a) => fetchAreaData(a, 5, start))),
     fetchAchievements(20, start),
     fetchWeeklyTrend(12),
     fetchMonthlyRecordCounts(),
+    fetchDailyHeatmap(365),
+    fetchMonthlyComparison(),
   ]);
 
   const stats = areasData.map((d) => ({
@@ -80,6 +86,11 @@ export default async function Dashboard({
         <GoalProgress areasData={areasData} monthlyRecordCounts={monthlyCounts} />
       </div>
 
+      {/* 월간 비교 */}
+      <div className="mb-8">
+        <MonthlyComparisonChart data={monthlyComparison} />
+      </div>
+
       {/* 영역 카드 그리드 */}
       <div className="mb-4">
         <h2 className="text-sm font-semibold text-[#888] uppercase tracking-widest mb-4">
@@ -90,6 +101,11 @@ export default async function Dashboard({
             <AreaCard key={data.area.key} data={data} />
           ))}
         </div>
+      </div>
+
+      {/* 연간 히트맵 */}
+      <div className="mt-8">
+        <Heatmap data={heatmapData} />
       </div>
 
       {/* 이룸 갤러리 */}
