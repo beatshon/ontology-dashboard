@@ -71,6 +71,13 @@ function toRecord(page: PageObjectResponse): NotionRecord {
   };
 }
 
+function isBulkImport(page: PageObjectResponse): boolean {
+  const created = new Date(page.created_time).getTime();
+  const edited = new Date(page.last_edited_time).getTime();
+  const dateStr = page.created_time.slice(0, 10);
+  return dateStr === "2026-03-21" && Math.abs(edited - created) < 60000;
+}
+
 function buildDateFilter(startDate?: string | null) {
   if (!startDate) return undefined;
   return {
@@ -105,8 +112,12 @@ export async function fetchAreaData(
       }),
     ]);
 
-    const records = (recent.results as PageObjectResponse[]).map(toRecord);
-    return { area, records, total: all.results.length };
+    const records = (recent.results as PageObjectResponse[])
+      .filter((p) => !isBulkImport(p))
+      .map(toRecord);
+    const totalFiltered = (all.results as PageObjectResponse[])
+      .filter((p) => !isBulkImport(p)).length;
+    return { area, records, total: totalFiltered };
   } catch {
     return { area, records: [], total: 0 };
   }

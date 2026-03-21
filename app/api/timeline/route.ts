@@ -62,6 +62,12 @@ export async function GET() {
         const created = page.created_time;
         const dateStr = created.slice(0, 10);
 
+        // Day One 대량 임포트 데이터 제외
+        // 2026-03-21에 생성되고 created_time ≈ last_edited_time이면 임포트된 것
+        const editedMs = new Date(page.last_edited_time).getTime();
+        const createdMs = new Date(created).getTime();
+        if (dateStr === "2026-03-21" && Math.abs(editedMs - createdMs) < 60000) continue;
+
         entries.push({
           title,
           area: area.key,

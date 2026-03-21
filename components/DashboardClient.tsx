@@ -100,9 +100,10 @@ export default function DashboardClient() {
 
       <PeriodFilter current={period} />
 
-      {/* 최근 기록 타임라인 (상단) */}
-      <div className="mb-6 sm:mb-8">
+      {/* Day One 아카이브 + 최근 기록 타임라인 (상단) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <RecentTimeline />
+        <DayOneArchive />
       </div>
 
       {/* 상단 요약 */}
@@ -175,10 +176,6 @@ export default function DashboardClient() {
         {stats ? <AchievementGallery achievements={stats.achievements} /> : <LoadingCard title="이룸 갤러리" />}
       </div>
 
-      {/* Day One 아카이브 (하단) */}
-      <div className="mt-6 sm:mt-8">
-        <DayOneArchive />
-      </div>
     </main>
   );
 }
