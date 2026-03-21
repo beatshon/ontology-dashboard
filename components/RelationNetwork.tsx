@@ -18,91 +18,94 @@ export default function RelationNetwork({ data }: Props) {
 
   const maxCount = Math.max(...data.map((d) => d.count));
   const today = new Date().toISOString().split("T")[0];
+  const totalRecords = data.reduce((sum, d) => sum + d.count, 0);
+
+  function recencyLabel(lastContact: string): { text: string; color: string; bgColor: string } {
+    const daysSince = Math.floor(
+      (new Date(today).getTime() - new Date(lastContact).getTime()) / 86400000
+    );
+    if (daysSince === 0) return { text: "오늘", color: "text-emerald-400", bgColor: "bg-emerald-500/20" };
+    if (daysSince <= 7) return { text: `${daysSince}일 전`, color: "text-emerald-400", bgColor: "bg-emerald-500/20" };
+    if (daysSince <= 30) return { text: `${daysSince}일 전`, color: "text-blue-400", bgColor: "bg-blue-500/20" };
+    if (daysSince <= 90) return { text: `${daysSince}일 전`, color: "text-amber-400", bgColor: "bg-amber-500/20" };
+    return { text: `${daysSince}일 전`, color: "text-red-400", bgColor: "bg-red-500/20" };
+  }
+
+  function barColor(lastContact: string): string {
+    const daysSince = Math.floor(
+      (new Date(today).getTime() - new Date(lastContact).getTime()) / 86400000
+    );
+    if (daysSince <= 7) return "bg-emerald-500";
+    if (daysSince <= 30) return "bg-blue-500";
+    if (daysSince <= 90) return "bg-amber-500";
+    return "bg-red-500/60";
+  }
 
   return (
     <div className="rounded-2xl bg-[#1a1a1a] p-6">
-      <h2 className="text-lg font-bold mb-1">🤝 관계 네트워크</h2>
-      <p className="text-xs text-gray-500 mb-4">{data.length}명과의 기록</p>
+      {/* 헤더 */}
+      <div className="flex items-baseline justify-between mb-1">
+        <h2 className="text-lg font-bold">🤝 관계 네트워크</h2>
+        <span className="text-xs text-gray-500">{totalRecords}건의 기록</span>
+      </div>
+      <p className="text-xs text-gray-500 mb-5">{data.length}명과의 만남</p>
 
-      {/* Bubble layout */}
-      <div className="flex flex-wrap gap-2 justify-center mb-4">
-        {data.slice(0, 20).map((person) => {
-          const size = Math.max(40, Math.min(80, (person.count / maxCount) * 80));
-          const daysSince = Math.floor(
-            (new Date(today).getTime() - new Date(person.lastContact).getTime()) /
-              (1000 * 60 * 60 * 24)
-          );
-          // Color: green (recent) → gray → red (old)
-          const hue = daysSince <= 7 ? 142 : daysSince <= 30 ? 220 : daysSince <= 90 ? 40 : 0;
-          const sat = daysSince <= 7 ? 70 : daysSince <= 30 ? 50 : 60;
-          const lum = 45;
+      {/* 사람별 리스트 */}
+      <div className="space-y-3">
+        {data.slice(0, 12).map((person, i) => {
+          const barWidth = Math.round((person.count / maxCount) * 100);
+          const recency = recencyLabel(person.lastContact);
 
           return (
-            <div
-              key={person.name}
-              className="flex flex-col items-center justify-center rounded-full shrink-0"
-              style={{
-                width: size,
-                height: size,
-                backgroundColor: `hsl(${hue}, ${sat}%, ${lum}%)`,
-                opacity: 0.9,
-              }}
-              title={`${person.name}: ${person.count}건, 마지막 ${person.lastContact}`}
-            >
-              <span className="text-xs font-bold text-white leading-tight text-center px-1 truncate max-w-full">
-                {person.name}
-              </span>
-              <span className="text-[9px] text-white/70">{person.count}</span>
+            <div key={person.name} className="group">
+              <div className="flex items-center gap-3">
+                {/* 순위 */}
+                <span className="text-[10px] text-gray-600 w-4 text-right">{i + 1}</span>
+
+                {/* 이름 */}
+                <span className="text-sm font-medium text-gray-200 w-20 truncate">
+                  {person.name}
+                </span>
+
+                {/* 바 */}
+                <div className="flex-1 h-5 bg-[#262626] rounded overflow-hidden relative">
+                  <div
+                    className={`h-full rounded ${barColor(person.lastContact)} transition-all`}
+                    style={{ width: `${barWidth}%` }}
+                  />
+                  <span className="absolute right-2 top-0.5 text-[10px] text-gray-400">
+                    {person.count}건
+                  </span>
+                </div>
+
+                {/* 마지막 연락 */}
+                <span className={`text-[10px] ${recency.color} ${recency.bgColor} px-1.5 py-0.5 rounded w-16 text-center shrink-0`}>
+                  {recency.text}
+                </span>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Legend */}
-      <div className="flex justify-center gap-4 text-[10px] text-gray-500">
+      {/* 범례 */}
+      <div className="flex justify-center gap-4 mt-5 text-[10px] text-gray-500">
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "hsl(142,70%,45%)" }} />
-          최근 7일
+          <span className="inline-block w-2 h-2 rounded-sm bg-emerald-500" />
+          7일 이내
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "hsl(220,50%,45%)" }} />
+          <span className="inline-block w-2 h-2 rounded-sm bg-blue-500" />
           30일 이내
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "hsl(40,60%,45%)" }} />
+          <span className="inline-block w-2 h-2 rounded-sm bg-amber-500" />
           90일 이내
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "hsl(0,60%,45%)" }} />
+          <span className="inline-block w-2 h-2 rounded-sm bg-red-500/60" />
           90일+
         </span>
-      </div>
-
-      {/* Table for top contacts */}
-      <div className="mt-4 space-y-1.5">
-        {data.slice(0, 8).map((person) => {
-          const daysSince = Math.floor(
-            (new Date(today).getTime() - new Date(person.lastContact).getTime()) /
-              (1000 * 60 * 60 * 24)
-          );
-          const barWidth = Math.round((person.count / maxCount) * 100);
-
-          return (
-            <div key={person.name} className="flex items-center gap-2 text-xs">
-              <span className="w-16 truncate text-gray-300">{person.name}</span>
-              <div className="flex-1 h-3 bg-[#262626] rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-pink-500/60"
-                  style={{ width: `${barWidth}%` }}
-                />
-              </div>
-              <span className="text-gray-500 w-8 text-right">{person.count}건</span>
-              <span className="text-gray-600 w-12 text-right">
-                {daysSince === 0 ? "오늘" : `${daysSince}일 전`}
-              </span>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
