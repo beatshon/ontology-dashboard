@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { AREAS } from "@/lib/notion";
+import { AREAS } from "@/lib/areas";
 import type { WeeklyCount } from "@/lib/notion";
 
 interface Props {

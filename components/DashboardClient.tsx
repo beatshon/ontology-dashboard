@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import { AREAS } from "@/lib/notion";
+import { useEffect, useState } from "react";
+import { AREAS } from "@/lib/areas";
 import { getDateRange } from "@/components/PeriodFilter";
 import type { PeriodKey } from "@/components/PeriodFilter";
 import type {
@@ -27,20 +27,21 @@ import DayOneArchive from "@/components/DayOneArchive";
 
 function LoadingCard({ title }: { title: string }) {
   return (
-    <div className="rounded-2xl bg-[#1a1a1a] p-6 animate-pulse">
-      <h2 className="text-lg font-bold mb-4">{title}</h2>
-      <div className="h-32 bg-[#222] rounded" />
+    <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6 animate-pulse">
+      <h2 className="text-base sm:text-lg font-bold mb-4">{title}</h2>
+      <div className="h-24 sm:h-32 bg-[#222] rounded" />
     </div>
   );
 }
 
-interface Props {
-  searchParamsPromise: Promise<Record<string, string | string[] | undefined>>;
-}
-
-export default function DashboardClient({ searchParamsPromise }: Props) {
-  const params = use(searchParamsPromise);
-  const period = (params.period as PeriodKey) || "all";
+export default function DashboardClient() {
+  // URL에서 period 파라미터 추출 (클라이언트 사이드)
+  const [period, setPeriod] = useState<PeriodKey>("all");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("period") as PeriodKey;
+    if (p) setPeriod(p);
+  }, []);
   const { start } = getDateRange(period);
 
   const [areasData, setAreasData] = useState<AreaData[] | null>(null);
@@ -50,33 +51,19 @@ export default function DashboardClient({ searchParamsPromise }: Props) {
   const [relationData, setRelationData] = useState<RelationNode[] | null>(null);
   const [achievementTrend, setAchievementTrend] = useState<AchievementTrend[] | null>(null);
 
-  // 영역 데이터
   useEffect(() => {
     const qs = start ? `?start=${start}` : "";
-    fetch(`/api/areas${qs}`)
-      .then((r) => r.json())
-      .then(setAreasData)
-      .catch(() => setAreasData([]));
+    fetch(`/api/areas${qs}`).then((r) => r.json()).then(setAreasData).catch(() => setAreasData([]));
   }, [start]);
 
-  // 통계 데이터
   useEffect(() => {
     const qs = start ? `?start=${start}` : "";
     fetch(`/api/stats${qs}`)
       .then((r) => r.json())
       .then(setStats)
-      .catch(() =>
-        setStats({
-          achievements: [],
-          trend: [],
-          monthlyCounts: [],
-          heatmapData: [],
-          monthlyComparison: [],
-        })
-      );
+      .catch(() => setStats({ achievements: [], trend: [], monthlyCounts: [], heatmapData: [], monthlyComparison: [] }));
   }, [start]);
 
-  // 감정·관계·이룸 (병렬)
   useEffect(() => {
     fetch("/api/sentiment").then((r) => r.json()).then(setSentimentData).catch(() => setSentimentData([]));
     fetch("/api/relation").then((r) => r.json()).then(setRelationData).catch(() => setRelationData([]));
@@ -98,30 +85,35 @@ export default function DashboardClient({ searchParamsPromise }: Props) {
   })) || [];
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <main className="max-w-7xl mx-auto px-3 py-6 sm:px-6 sm:py-10 lg:px-8">
       {/* 헤더 */}
-      <div className="mb-10 flex items-end justify-between">
+      <div className="mb-6 sm:mb-10 flex items-end justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             온톨로지 대시보드
           </h1>
-          <p className="text-[#555] mt-1 text-sm">제이스의 삶의 기록</p>
+          <p className="text-[#555] mt-1 text-xs sm:text-sm">제이스의 삶의 기록</p>
         </div>
-        <span className="text-xs text-[#444]">{now}</span>
+        <span className="text-[10px] sm:text-xs text-[#444]">{now}</span>
       </div>
 
       <PeriodFilter current={period} />
 
+      {/* Day One 아카이브 (상단 배치) */}
+      <div className="mb-6 sm:mb-8">
+        <DayOneArchive />
+      </div>
+
       {/* 상단 요약 */}
       {areasData ? (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="sm:col-span-2 lg:col-span-2">
             <StatsChart stats={chartStats} />
-            <BalanceRadar stats={chartStats} />
           </div>
-        </>
+          <BalanceRadar stats={chartStats} />
+        </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <LoadingCard title="영역별 기록" />
           <LoadingCard title="삶의 균형" />
         </div>
@@ -129,62 +121,57 @@ export default function DashboardClient({ searchParamsPromise }: Props) {
 
       {/* 트렌드 + 목표 */}
       {stats && areasData ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="lg:col-span-2">
             <TrendChart data={stats.trend} />
           </div>
           <GoalProgress areasData={areasData} monthlyRecordCounts={stats.monthlyCounts} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="lg:col-span-2"><LoadingCard title="주간 기록 트렌드" /></div>
           <LoadingCard title="이번 달 목표" />
         </div>
       )}
 
       {/* 감정 흐름 + 관계 네트워크 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {sentimentData ? <SentimentChart data={sentimentData} /> : <LoadingCard title="😊 감정 흐름" />}
         {relationData ? <RelationNetwork data={relationData} /> : <LoadingCard title="🤝 관계 네트워크" />}
       </div>
 
       {/* 이룸 트렌드 + 월간 비교 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {achievementTrend ? <AchievementTrendChart data={achievementTrend} /> : <LoadingCard title="🏆 이룸 포인트 트렌드" />}
         {stats ? <MonthlyComparisonChart data={stats.monthlyComparison} /> : <LoadingCard title="월간 비교" />}
       </div>
 
       {/* 영역 카드 */}
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-[#888] uppercase tracking-widest mb-4">
+        <h2 className="text-xs sm:text-sm font-semibold text-[#888] uppercase tracking-widest mb-3 sm:mb-4">
           7가지 영역
         </h2>
         {areasData ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
             {areasData.map((data) => (
               <AreaCard key={data.area.key} data={data} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
             {AREAS.map((a) => <LoadingCard key={a.key} title={`${a.emoji} ${a.label}`} />)}
           </div>
         )}
       </div>
 
       {/* 히트맵 */}
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8 overflow-x-auto">
         {stats ? <Heatmap data={stats.heatmapData} /> : <LoadingCard title="연간 기록 히트맵" />}
       </div>
 
       {/* 이룸 갤러리 */}
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         {stats ? <AchievementGallery achievements={stats.achievements} /> : <LoadingCard title="이룸 갤러리" />}
-      </div>
-
-      {/* Day One */}
-      <div className="mt-8">
-        <DayOneArchive />
       </div>
     </main>
   );

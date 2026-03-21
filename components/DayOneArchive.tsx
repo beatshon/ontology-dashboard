@@ -28,7 +28,7 @@ export default function DayOneArchive() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl bg-[#1a1a1a] p-6">
+      <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6">
         <h2 className="text-lg font-bold mb-4">📔 Day One 일기 아카이브</h2>
         <p className="text-gray-500 text-sm">로딩 중...</p>
       </div>
@@ -40,10 +40,10 @@ export default function DayOneArchive() {
   const withPhoto = entries.filter((e) => e.hasPhoto);
   const years = [...new Set(entries.map((e) => e.date?.slice(0, 4)).filter(Boolean))].sort();
   const dateRange = years.length > 0 ? `${years[0]}–${years[years.length - 1]}` : "";
-  const displayed = showAll ? entries : entries.slice(0, 12);
+  const displayed = showAll ? entries : entries.slice(0, 3);
 
   return (
-    <div className="rounded-2xl bg-[#1a1a1a] p-6">
+    <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6">
       {/* 헤더 */}
       <div className="flex items-baseline justify-between mb-1">
         <h2 className="text-lg font-bold">📔 Day One 일기 아카이브</h2>
@@ -54,7 +54,7 @@ export default function DayOneArchive() {
       </p>
 
       {/* 카드 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-h-[400px] sm:max-h-[600px] overflow-y-auto pr-1">
         {displayed.map((entry) => (
           <div
             key={entry.uuid}
@@ -102,7 +102,7 @@ export default function DayOneArchive() {
       </div>
 
       {/* 더 보기 */}
-      {entries.length > 12 && !showAll && (
+      {entries.length > 3 && !showAll && (
         <button
           onClick={() => setShowAll(true)}
           className="mt-4 w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 transition"
