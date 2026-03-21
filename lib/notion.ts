@@ -447,6 +447,11 @@ export async function fetchRelationNetwork(): Promise<RelationNode[]> {
       for (const page of res.results as PageObjectResponse[]) {
         const name = extractTitle(page);
         if (!name || name === "제목 없음") continue;
+
+        // 사람 이름 필터: 10자 이하이고 동사/조사가 없는 짧은 이름만 포함
+        // 긴 제목(일기 내용)은 관계 기록이 아닌 Day One 임포트
+        if (name.length > 10) continue;
+
         const created = page.created_time.split("T")[0];
         if (!peopleMap[name]) {
           peopleMap[name] = { count: 0, lastContact: created };
