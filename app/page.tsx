@@ -1,3 +1,4 @@
+// Cloudflare Pages는 Edge runtime만 지원하므로 유지
 export const runtime = "edge";
 
 import {
@@ -8,9 +9,6 @@ import {
   fetchMonthlyRecordCounts,
   fetchDailyHeatmap,
   fetchMonthlyComparison,
-  fetchSentimentTrend,
-  fetchRelationNetwork,
-  fetchAchievementTrend,
 } from "@/lib/notion";
 import StatsChart from "@/components/StatsChart";
 import BalanceRadar from "@/components/BalanceRadar";
@@ -21,12 +19,12 @@ import AchievementGallery from "@/components/AchievementGallery";
 import Heatmap from "@/components/Heatmap";
 import MonthlyComparisonChart from "@/components/MonthlyComparison";
 import PeriodFilter, { getDateRange } from "@/components/PeriodFilter";
-import SentimentChart from "@/components/SentimentChart";
-import RelationNetwork from "@/components/RelationNetwork";
-import AchievementTrendChart from "@/components/AchievementTrend";
+import AsyncSentimentChart from "@/components/AsyncSentimentChart";
+import AsyncRelationNetwork from "@/components/AsyncRelationNetwork";
+import AsyncAchievementTrend from "@/components/AsyncAchievementTrend";
 import type { PeriodKey } from "@/components/PeriodFilter";
 
-export const revalidate = 300;
+export const revalidate = 0;
 
 export default async function Dashboard({
   searchParams,
@@ -37,27 +35,17 @@ export default async function Dashboard({
   const period = (params.period as PeriodKey) || "all";
   const { start } = getDateRange(period);
 
-  const [
-    areasData,
-    achievements,
-    trend,
-    monthlyCounts,
-    heatmapData,
-    monthlyComparison,
-    sentimentData,
-    relationData,
-    achievementTrend,
-  ] = await Promise.all([
-    Promise.all(AREAS.map((a) => fetchAreaData(a, 5, start))),
-    fetchAchievements(20, start),
-    fetchWeeklyTrend(12),
-    fetchMonthlyRecordCounts(),
-    fetchDailyHeatmap(365),
-    fetchMonthlyComparison(),
-    fetchSentimentTrend(30),
-    fetchRelationNetwork(),
-    fetchAchievementTrend(12),
-  ]);
+  // 순차 실행 (Notion API 속도 제한 3 req/sec 대응)
+  const areasData = [];
+  for (const a of AREAS) {
+    areasData.push(await fetchAreaData(a, 5, start));
+  }
+  const achievements = await fetchAchievements(20, start);
+  const trend = await fetchWeeklyTrend(12);
+  const monthlyCounts = await fetchMonthlyRecordCounts();
+  const heatmapData = await fetchDailyHeatmap(365);
+
+  const monthlyComparison = await fetchMonthlyComparison();
 
   const stats = areasData.map((d) => ({
     area: d.area.key,
@@ -105,15 +93,15 @@ export default async function Dashboard({
         <GoalProgress areasData={areasData} monthlyRecordCounts={monthlyCounts} />
       </div>
 
-      {/* 감정 흐름 + 관계 네트워크 */}
+      {/* 감정 흐름 + 관계 네트워크 (클라이언트에서 별도 fetch) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-        <SentimentChart data={sentimentData} />
-        <RelationNetwork data={relationData} />
+        <AsyncSentimentChart />
+        <AsyncRelationNetwork />
       </div>
 
       {/* 이룸 포인트 트렌드 + 월간 비교 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-        <AchievementTrendChart data={achievementTrend} />
+        <AsyncAchievementTrend />
         <MonthlyComparisonChart data={monthlyComparison} />
       </div>
 
@@ -138,6 +126,7 @@ export default async function Dashboard({
       <div className="mt-8">
         <AchievementGallery achievements={achievements} />
       </div>
+
     </main>
   );
 }

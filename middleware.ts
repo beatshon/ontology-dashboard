@@ -1,25 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-const PASSWORD = process.env.DASHBOARD_PASSWORD ?? "ontology";
-
-export function middleware(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-
-  if (auth) {
-    const [scheme, encoded] = auth.split(" ");
-    if (scheme === "Basic" && encoded) {
-      const decoded = atob(encoded);
-      const [, password] = decoded.split(":");
-      if (password === PASSWORD) return NextResponse.next();
-    }
-  }
-
-  return new NextResponse("Unauthorized", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Ontology Dashboard"',
-    },
-  });
+// Basic Auth 비활성화 — 필요 시 DASHBOARD_PASSWORD 환경변수 설정으로 재활성화
+export function middleware() {
+  return NextResponse.next();
 }
 
 export const config = {

@@ -385,39 +385,41 @@ export async function fetchSentimentTrend(days = 30): Promise<SentimentRecord[]>
 
   const records: SentimentRecord[] = [];
 
-  await Promise.all(
-    AREAS.map(async (area) => {
-      const notion = getClient();
-      const dbId = process.env[area.dbEnvKey];
-      if (!dbId) return;
+  // 순차 실행 (Notion API 속도 제한 3 req/sec 대응)
+  for (const area of AREAS) {
+    const notion = getClient();
+    const dbId = process.env[area.dbEnvKey];
+    if (!dbId) continue;
 
-      try {
-        const res = await notion.databases.query({
-          database_id: dbId,
-          filter: { timestamp: "created_time", created_time: { on_or_after: startStr } },
-          sorts: [{ timestamp: "created_time", direction: "ascending" }],
-          page_size: 100,
+    try {
+      const res = await notion.databases.query({
+        database_id: dbId,
+        filter: { timestamp: "created_time", created_time: { on_or_after: startStr } },
+        sorts: [{ timestamp: "created_time", direction: "ascending" }],
+        page_size: 100,
+      });
+
+      for (const page of res.results as PageObjectResponse[]) {
+        // 감정 속성이 있는 페이지만 (속성이 없는 DB는 스킵)
+        const prop = page.properties["감정"];
+        if (!prop) continue;
+        const label = extractSelect(page, "감정");
+        if (!label) continue;
+        const intensity = extractNumber(page, "감정 강도") ?? 3;
+        const emotion = extractText(page, "감정 상세") ?? "";
+        records.push({
+          date: page.created_time.split("T")[0],
+          label: label as SentimentRecord["label"],
+          intensity,
+          emotion,
+          area: area.key,
+          title: extractTitle(page),
         });
-
-        for (const page of res.results as PageObjectResponse[]) {
-          const label = extractSelect(page, "감정");
-          if (!label) continue;
-          const intensity = extractNumber(page, "감정 강도") ?? 3;
-          const emotion = extractText(page, "감정 상세") ?? "";
-          records.push({
-            date: page.created_time.split("T")[0],
-            label: label as SentimentRecord["label"],
-            intensity,
-            emotion,
-            area: area.key,
-            title: extractTitle(page),
-          });
-        }
-      } catch {
-        // skip
       }
-    }),
-  );
+    } catch {
+      // DB에 감정 속성이 없으면 validation_error 발생 — 무시
+    }
+  }
 
   records.sort((a, b) => a.date.localeCompare(b.date));
   return records;
@@ -460,7 +462,8 @@ export async function fetchRelationNetwork(): Promise<RelationNode[]> {
     return Object.entries(peopleMap)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.count - a.count);
-  } catch {
+  } catch (e) {
+    console.error("[RelationNetwork] 오류:", e);
     return [];
   }
 }
