@@ -24,6 +24,7 @@ import SentimentChart from "@/components/SentimentChart";
 import RelationNetwork from "@/components/RelationNetwork";
 import AchievementTrendChart from "@/components/AchievementTrend";
 import DayOneArchive from "@/components/DayOneArchive";
+import RecentTimeline from "@/components/RecentTimeline";
 
 function LoadingCard({ title }: { title: string }) {
   return (
@@ -99,9 +100,9 @@ export default function DashboardClient() {
 
       <PeriodFilter current={period} />
 
-      {/* Day One 아카이브 (상단 배치) */}
+      {/* 최근 기록 타임라인 (상단) */}
       <div className="mb-6 sm:mb-8">
-        <DayOneArchive />
+        <RecentTimeline />
       </div>
 
       {/* 상단 요약 */}
@@ -172,6 +173,11 @@ export default function DashboardClient() {
       {/* 이룸 갤러리 */}
       <div className="mt-6 sm:mt-8">
         {stats ? <AchievementGallery achievements={stats.achievements} /> : <LoadingCard title="이룸 갤러리" />}
+      </div>
+
+      {/* Day One 아카이브 (하단) */}
+      <div className="mt-6 sm:mt-8">
+        <DayOneArchive />
       </div>
     </main>
   );
