@@ -53,24 +53,25 @@ export default function DashboardClient() {
   const [relationData, setRelationData] = useState<RelationNode[] | null>(null);
   const [achievementTrend, setAchievementTrend] = useState<AchievementTrend[] | null>(null);
 
-  useEffect(() => {
+  // 데이터 fetch + 5분 자동 갱신
+  const fetchAll = () => {
     const qs = start ? `?start=${start}` : "";
     fetch(`/api/areas${qs}`).then((r) => r.json()).then(setAreasData).catch(() => setAreasData([]));
-  }, [start]);
-
-  useEffect(() => {
-    const qs = start ? `?start=${start}` : "";
     fetch(`/api/stats${qs}`)
       .then((r) => r.json())
       .then(setStats)
       .catch(() => setStats({ achievements: [], trend: [], monthlyCounts: [], heatmapData: [], monthlyComparison: [] }));
-  }, [start]);
-
-  useEffect(() => {
     fetch("/api/sentiment").then((r) => r.json()).then(setSentimentData).catch(() => setSentimentData([]));
     fetch("/api/relation").then((r) => r.json()).then(setRelationData).catch(() => setRelationData([]));
     fetch("/api/achievement-trend").then((r) => r.json()).then(setAchievementTrend).catch(() => setAchievementTrend([]));
-  }, []);
+  };
+
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(fetchAll, 5 * 60 * 1000); // 5분
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start]);
 
   const now = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
