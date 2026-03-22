@@ -59,7 +59,16 @@ export default function StatsChart({ stats }: Props) {
               );
             }}
           />
-          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+          <Bar
+            dataKey="count"
+            radius={[4, 4, 0, 0]}
+            cursor="pointer"
+            onClick={(data) => {
+              if (data?.area) {
+                window.location.href = `/area/${encodeURIComponent(data.area)}`;
+              }
+            }}
+          >
             {stats.map((entry, i) => (
               <Cell key={i} fill={entry.color} fillOpacity={0.85} />
             ))}
