@@ -3,33 +3,47 @@
 import { useEffect, useState } from "react";
 
 interface DayOneEntry {
-  uuid: string;
-  text: string;
-  date: string | null;
-  hasPhoto: boolean;
+  title: string;
+  area: string;
+  date: string;
+  sentiment: string | null;
+  content: string;
+  url: string;
   location: string | null;
-  weather: string | null;
+  photoUrl: string | null;
 }
 
-const PHOTO_BASE = "https://dayone-photos.pages.dev";
+const SENTIMENT_EMOJI: Record<string, string> = {
+  "긍정": "😊",
+  "부정": "😔",
+  "중립": "😐",
+};
+
+const AREA_EMOJI: Record<string, string> = {
+  "나": "🌱",
+  "일": "💼",
+  "관계": "🤝",
+  "배움": "📚",
+  "건강": "🏃",
+  "가족": "🏡",
+  "경제적 자유": "💰",
+};
 
 export default function DayOneArchive() {
-  const [entries, setEntries] = useState<DayOneEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<DayOneEntry[] | null>(null);
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    fetch("/dayone-map.json")
+    fetch("/api/dayone")
       .then((r) => r.json())
-      .then((d: DayOneEntry[]) => setEntries(d))
-      .catch(() => setEntries([]))
-      .finally(() => setLoading(false));
+      .then((d) => setEntries(d.entries || []))
+      .catch(() => setEntries([]));
   }, []);
 
-  if (loading) {
+  if (entries === null) {
     return (
       <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6">
-        <h2 className="text-lg font-bold mb-4">📔 Day One 일기 아카이브</h2>
+        <h2 className="text-lg font-bold mb-4">📔 Day One 일기</h2>
         <p className="text-gray-500 text-sm">로딩 중...</p>
       </div>
     );
@@ -37,34 +51,32 @@ export default function DayOneArchive() {
 
   if (entries.length === 0) return null;
 
-  const withPhoto = entries.filter((e) => e.hasPhoto);
-  const years = [...new Set(entries.map((e) => e.date?.slice(0, 4)).filter(Boolean))].sort();
-  const dateRange = years.length > 0 ? `${years[0]}–${years[years.length - 1]}` : "";
+  const withPhoto = entries.filter((e) => e.photoUrl);
   const displayed = showAll ? entries : entries.slice(0, 3);
 
   return (
     <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6">
-      {/* 헤더 */}
       <div className="flex items-baseline justify-between mb-1">
-        <h2 className="text-lg font-bold">📔 Day One 일기 아카이브</h2>
-        <span className="text-xs text-gray-500">{dateRange}</span>
+        <h2 className="text-lg font-bold">📔 Day One 일기</h2>
+        <span className="text-xs text-gray-500">
+          {entries.length}개 · 사진 {withPhoto.length}장
+        </span>
       </div>
-      <p className="text-xs text-gray-500 mb-5">
-        {entries.length}개의 일기 · 사진 {withPhoto.length}장
-      </p>
+      <p className="text-xs text-gray-500 mb-4">최신순</p>
 
-      {/* 카드 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-h-[400px] sm:max-h-[600px] overflow-y-auto pr-1">
-        {displayed.map((entry) => (
-          <div
-            key={entry.uuid}
-            className="group rounded-xl bg-[#222] border border-gray-800/40 overflow-hidden hover:bg-[#2a2a2a] hover:border-gray-600/50 transition"
+      <div className="space-y-3">
+        {displayed.map((entry, i) => (
+          <a
+            key={`${entry.title}-${i}`}
+            href={entry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block group rounded-xl bg-[#222] border border-gray-800/40 overflow-hidden hover:bg-[#2a2a2a] hover:border-gray-600/50 transition"
           >
-            {/* 썸네일 */}
-            {entry.hasPhoto && (
+            {entry.photoUrl && (
               <div className="w-full h-40 overflow-hidden bg-[#1a1a1a]">
                 <img
-                  src={`${PHOTO_BASE}/${entry.uuid}.jpg`}
+                  src={entry.photoUrl}
                   alt=""
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
@@ -72,40 +84,43 @@ export default function DayOneArchive() {
               </div>
             )}
 
-            <div className="p-4">
-              {/* 날짜 */}
-              {entry.date && (
+            <div className="p-3">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] text-gray-600">{entry.date}</span>
-              )}
-
-              {/* 본문 */}
-              <p className="text-sm text-gray-300 mt-1 line-clamp-4 leading-relaxed">
-                {entry.text}
-              </p>
-
-              {/* 위치 + 날씨 */}
-              <div className="mt-2 flex flex-wrap gap-1">
-                {entry.location && (
-                  <span className="text-[10px] text-gray-600 bg-[#1a1a1a] px-1.5 py-0.5 rounded">
-                    📍 {entry.location}
-                  </span>
-                )}
-                {entry.weather && (
-                  <span className="text-[10px] text-gray-600 bg-[#1a1a1a] px-1.5 py-0.5 rounded">
-                    🌤 {entry.weather}
+                <span className="text-[10px] text-gray-600">
+                  {AREA_EMOJI[entry.area] || "📝"} {entry.area}
+                </span>
+                {entry.sentiment && (
+                  <span className="text-[10px]">
+                    {SENTIMENT_EMOJI[entry.sentiment] || ""}
                   </span>
                 )}
               </div>
+
+              <h3 className="text-sm font-medium text-gray-200 mb-1">
+                {entry.title}
+              </h3>
+
+              {entry.content && (
+                <p className="text-xs text-gray-500 line-clamp-2">
+                  {entry.content}
+                </p>
+              )}
+
+              {entry.location && (
+                <span className="text-[10px] text-gray-600 mt-1 inline-block">
+                  📍 {entry.location}
+                </span>
+              )}
             </div>
-          </div>
+          </a>
         ))}
       </div>
 
-      {/* 더 보기 */}
       {entries.length > 3 && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="mt-4 w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 transition"
+          className="mt-3 w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 transition"
         >
           전체 {entries.length}개 보기
         </button>

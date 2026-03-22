@@ -71,11 +71,25 @@ function toRecord(page: PageObjectResponse): NotionRecord {
   };
 }
 
-function isBulkImport(page: PageObjectResponse): boolean {
-  const created = new Date(page.created_time).getTime();
-  const edited = new Date(page.last_edited_time).getTime();
+// Day One 임포트 소스 태그로 식별
+// 임포트 시 본문에 📍(위치) 또는 🌤(날씨)가 포함되거나, "Day One" 마커가 있는 항목
+function isDayOneImport(page: PageObjectResponse): boolean {
   const dateStr = page.created_time.slice(0, 10);
-  return dateStr === "2026-03-21" && Math.abs(edited - created) < 60000;
+  if (dateStr !== "2026-03-21") return false;
+
+  // 제목 기반 판단: 봇이 만든 기록은 짧고 구체적, Day One 임포트는 서술형
+  // 봇 기록 패턴: "✅", "💡", 사람이름(짧음), 구체적 행동
+  const title = extractTitle(page);
+  if (title.startsWith("✅") || title.startsWith("💡")) return false;
+
+  // created_time과 last_edited_time 차이가 2분 이내이고
+  // 2026-03-21 UTC 02:00~14:00 (KST 11:00~23:00) 사이 = 임포트 시간대
+  const created = new Date(page.created_time);
+  const edited = new Date(page.last_edited_time);
+  const diffMs = Math.abs(edited.getTime() - created.getTime());
+  const hour = created.getUTCHours();
+
+  return diffMs < 120000 && hour >= 2 && hour <= 14;
 }
 
 function buildDateFilter(startDate?: string | null) {
@@ -102,7 +116,7 @@ export async function fetchAreaData(
       notion.databases.query({
         database_id: dbId,
         sorts: [{ timestamp: "created_time", direction: "descending" }],
-        page_size: limit,
+        page_size: limit + 20,
         ...(filter ? { filter } : {}),
       }),
       notion.databases.query({
@@ -113,10 +127,11 @@ export async function fetchAreaData(
     ]);
 
     const records = (recent.results as PageObjectResponse[])
-      .filter((p) => !isBulkImport(p))
-      .map(toRecord);
+      .filter((p) => !isDayOneImport(p))
+      .map(toRecord)
+      .slice(0, limit);
     const totalFiltered = (all.results as PageObjectResponse[])
-      .filter((p) => !isBulkImport(p)).length;
+      .filter((p) => !isDayOneImport(p)).length;
     return { area, records, total: totalFiltered };
   } catch {
     return { area, records: [], total: 0 };
