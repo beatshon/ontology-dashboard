@@ -122,6 +122,9 @@ export async function GET(request: Request) {
           }
         }
 
+        // Day One 기록만 필터: 이미지 또는 위치 정보가 있는 것만
+        if (!photoUrl && !location) continue;
+
         const dateStr = page.last_edited_time.slice(0, 10);
         byArea[area] = (byArea[area] || 0) + 1;
 
