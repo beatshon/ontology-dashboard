@@ -26,6 +26,7 @@ import AchievementTrendChart from "@/components/AchievementTrend";
 import DayOneArchive from "@/components/DayOneArchive";
 import RecentTimeline from "@/components/RecentTimeline";
 import YouTubeSection from "@/components/YouTubeSection";
+import SearchBar from "@/components/SearchBar";
 
 function LoadingCard({ title }: { title: string }) {
   return (
@@ -101,6 +102,8 @@ export default function DashboardClient() {
       </div>
 
       <PeriodFilter current={period} />
+
+      <SearchBar />
 
       {/* Day One 아카이브 + 최근 기록 타임라인 (상단) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
