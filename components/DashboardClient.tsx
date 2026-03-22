@@ -25,6 +25,7 @@ import RelationNetwork from "@/components/RelationNetwork";
 import AchievementTrendChart from "@/components/AchievementTrend";
 import DayOneArchive from "@/components/DayOneArchive";
 import RecentTimeline from "@/components/RecentTimeline";
+import YouTubeSection from "@/components/YouTubeSection";
 
 function LoadingCard({ title }: { title: string }) {
   return (
@@ -142,10 +143,11 @@ export default function DashboardClient() {
         {relationData ? <RelationNetwork data={relationData} /> : <LoadingCard title="🤝 관계 네트워크" />}
       </div>
 
-      {/* 이룸 트렌드 + 월간 비교 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+      {/* 이룸 트렌드 + 월간 비교 + YouTube */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {achievementTrend ? <AchievementTrendChart data={achievementTrend} /> : <LoadingCard title="🏆 이룸 포인트 트렌드" />}
         {stats ? <MonthlyComparisonChart data={stats.monthlyComparison} /> : <LoadingCard title="월간 비교" />}
+        <YouTubeSection />
       </div>
 
       {/* 영역 카드 */}
