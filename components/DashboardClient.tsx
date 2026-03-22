@@ -27,6 +27,7 @@ import DayOneArchive from "@/components/DayOneArchive";
 import RecentTimeline from "@/components/RecentTimeline";
 import YouTubeSection from "@/components/YouTubeSection";
 import SearchBar from "@/components/SearchBar";
+import Navigation from "@/components/Navigation";
 
 function LoadingCard({ title }: { title: string }) {
   return (
@@ -101,6 +102,7 @@ export default function DashboardClient() {
         <span className="text-[10px] sm:text-xs text-[#444]">{now}</span>
       </div>
 
+      <Navigation />
       <PeriodFilter current={period} />
 
       <SearchBar />
