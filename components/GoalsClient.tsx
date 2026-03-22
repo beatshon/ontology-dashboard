@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from "recharts";
 import Navigation from "@/components/Navigation";
 
 // Siri 서버 API (로컬 Mac에서 실행 중)
@@ -260,6 +261,21 @@ export default function GoalsClient() {
                     </div>
                   ))}
                 </div>
+
+                {/* 진행률 차트 (체크인 2건 이상) */}
+                {goal.check_ins.length >= 2 && (
+                  <div className="h-32 mb-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={goal.check_ins.map((ci) => ({ date: ci.date.slice(5), value: ci.value }))}>
+                        <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#555" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: "#555" }} axisLine={false} tickLine={false} domain={[0, goal.target]} />
+                        <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, fontSize: 11 }} />
+                        <ReferenceLine y={goal.target} stroke="#555" strokeDasharray="3 3" label={{ value: "목표", position: "right", fontSize: 9, fill: "#555" }} />
+                        <Line type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: "#22c55e" }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
 
                 {/* 업데이트 버튼 */}
                 {updateGoalId === goal.id ? (
