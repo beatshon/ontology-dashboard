@@ -148,5 +148,9 @@ export async function GET(request: Request) {
     total: entries.length,
     byArea,
     entries: entries.slice(0, 30),
+  }, {
+    headers: {
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+    },
   });
 }

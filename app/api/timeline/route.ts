@@ -88,5 +88,9 @@ export async function GET() {
   return Response.json({
     entries: entries.slice(0, 6),
     total: entries.length,
+  }, {
+    headers: {
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+    },
   });
 }
