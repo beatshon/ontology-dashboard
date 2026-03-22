@@ -31,10 +31,16 @@ export default function RecentTimeline() {
   const [entries, setEntries] = useState<TimelineEntry[] | null>(null);
 
   useEffect(() => {
-    fetch("/api/timeline")
-      .then((r) => r.json())
+    // 캐시 API 우선 시도, 실패 시 직접 Notion API
+    fetch("https://api.againline.kr/api/cache/timeline")
+      .then((r) => r.ok ? r.json() : Promise.reject())
       .then((d) => setEntries(d.entries || []))
-      .catch(() => setEntries([]));
+      .catch(() => {
+        fetch("/api/timeline")
+          .then((r) => r.json())
+          .then((d) => setEntries(d.entries || []))
+          .catch(() => setEntries([]));
+      });
   }, []);
 
   if (entries === null) {
