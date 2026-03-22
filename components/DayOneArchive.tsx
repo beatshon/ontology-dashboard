@@ -34,10 +34,16 @@ export default function DayOneArchive() {
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    fetch("/api/dayone")
-      .then((r) => r.json())
+    // 캐시 API 우선, 실패 시 직접 Notion API
+    fetch("https://api.againline.kr/api/cache/dayone")
+      .then((r) => r.ok ? r.json() : Promise.reject())
       .then((d) => setEntries(d.entries || []))
-      .catch(() => setEntries([]));
+      .catch(() => {
+        fetch("/api/dayone")
+          .then((r) => r.json())
+          .then((d) => setEntries(d.entries || []))
+          .catch(() => setEntries([]));
+      });
   }, []);
 
   if (entries === null) {
