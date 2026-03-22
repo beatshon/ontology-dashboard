@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
 
 // Siri 서버 API (로컬 Mac에서 실행 중)
-const API_BASE = "http://localhost:18080";
+const API_BASE = "https://api.againline.kr";
 
 interface Milestone {
   value: number;
