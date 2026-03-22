@@ -68,25 +68,25 @@ export default function RecentTimeline() {
         <span className="text-xs text-gray-500">전체 영역 최신순</span>
       </div>
 
-      <div className="space-y-3">
-        {entries.map((entry, i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[320px] overflow-y-auto pr-1">
+        {entries.slice(0, 6).map((entry, i) => (
           <a
             key={`${entry.date}-${i}`}
             href={entry.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`block rounded-xl bg-[#222] border-l-3 ${AREA_COLOR[entry.area] || "border-gray-500/50"} p-4 hover:bg-[#2a2a2a] transition group`}
+            className={`block rounded-xl bg-[#222] border-l-3 ${AREA_COLOR[entry.area] || "border-gray-500/50"} p-3 hover:bg-[#2a2a2a] transition group`}
             style={{ borderLeftWidth: "3px" }}
           >
-            <div className="flex items-start justify-between gap-2">
+            <div>
               <div className="flex-1 min-w-0">
                 {/* 영역 + 제목 */}
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs bg-[#1a1a1a] px-1.5 py-0.5 rounded text-gray-400 shrink-0">
+                  <span className="text-[10px] bg-[#1a1a1a] px-1.5 py-0.5 rounded text-gray-400 shrink-0">
                     {AREA_EMOJI[entry.area] || "📌"} {entry.area}
                   </span>
                   {entry.sentiment && (
-                    <span className="text-xs">
+                    <span className="text-[10px]">
                       {SENTIMENT_EMOJI[entry.sentiment] || ""}
                     </span>
                   )}
@@ -100,7 +100,7 @@ export default function RecentTimeline() {
                   </p>
                 )}
               </div>
-              <span className="text-[10px] text-gray-600 shrink-0 mt-1">
+              <span className="text-[10px] text-gray-600 mt-1">
                 {entry.date}
               </span>
             </div>
