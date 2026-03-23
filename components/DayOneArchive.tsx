@@ -58,7 +58,7 @@ export default function DayOneArchive() {
   if (entries.length === 0) return null;
 
   const withPhoto = entries.filter((e) => e.photoUrl);
-  const displayed = showAll ? entries : entries.slice(0, 1);
+  const displayed = showAll ? entries : entries.slice(0, 3);
 
   return (
     <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6">
