@@ -204,9 +204,9 @@ export interface WeeklyCount {
 
 export async function fetchWeeklyTrend(weeks = 12): Promise<WeeklyCount[]> {
   const now = new Date();
-  const startDate = new Date(now);
-  startDate.setDate(now.getDate() - weeks * 7);
-  const startStr = startDate.toISOString().split("T")[0];
+  // 온톨로지 봇 시작일(3/9)부터 표시
+  const startDate = new Date("2026-03-09");
+  const startStr = "2026-03-09";
 
   const allCounts = await Promise.all(
     AREAS.map(async (area) => {
