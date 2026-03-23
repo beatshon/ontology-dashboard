@@ -56,7 +56,11 @@ export default function DashboardClient() {
   const [relationData, setRelationData] = useState<RelationNode[] | null>(null);
   const [achievementTrend, setAchievementTrend] = useState<AchievementTrend[] | null>(null);
 
-  // 데이터 fetch + 5분 자동 갱신
+  // 캐시 우선 fetch (빠름) → 실패 시 직접 API (느림)
+  const fetchCacheFirst = (cacheUrl: string, fallbackUrl: string) =>
+    fetch(cacheUrl).then((r) => r.ok ? r.json() : Promise.reject()).catch(() => fetch(fallbackUrl).then((r) => r.json()));
+
+  const CACHE = "https://api.againline.kr";
   const fetchAll = () => {
     const qs = start ? `?start=${start}` : "";
     fetch(`/api/areas${qs}`).then((r) => r.json()).then(setAreasData).catch(() => setAreasData([]));
@@ -64,9 +68,9 @@ export default function DashboardClient() {
       .then((r) => r.json())
       .then(setStats)
       .catch(() => setStats({ achievements: [], trend: [], monthlyCounts: [], heatmapData: [], monthlyComparison: [] }));
-    fetch("/api/sentiment").then((r) => r.json()).then(setSentimentData).catch(() => setSentimentData([]));
-    fetch("/api/relation").then((r) => r.json()).then(setRelationData).catch(() => setRelationData([]));
-    fetch("/api/achievement-trend").then((r) => r.json()).then(setAchievementTrend).catch(() => setAchievementTrend([]));
+    fetchCacheFirst(`${CACHE}/api/cache/sentiment`, "/api/sentiment").then(setSentimentData).catch(() => setSentimentData([]));
+    fetchCacheFirst(`${CACHE}/api/cache/relation`, "/api/relation").then(setRelationData).catch(() => setRelationData([]));
+    fetchCacheFirst(`${CACHE}/api/cache/achievement-trend`, "/api/achievement-trend").then(setAchievementTrend).catch(() => setAchievementTrend([]));
   };
 
   useEffect(() => {
