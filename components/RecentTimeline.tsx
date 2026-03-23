@@ -12,6 +12,11 @@ interface TimelineEntry {
   url: string;
 }
 
+function isNew(dateStr: string): boolean {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return diff < 24 * 60 * 60 * 1000; // 24시간
+}
+
 const AREA_EMOJI: Record<string, string> = {
   나: "🌱", 일: "💼", 관계: "🤝", 배움: "📚",
   건강: "🏃", 가족: "🏡", "경제적 자유": "💰", 이룸: "🏆",
@@ -88,6 +93,11 @@ export default function RecentTimeline() {
                   {entry.sentiment && (
                     <span className="text-[10px]">
                       {SENTIMENT_EMOJI[entry.sentiment] || ""}
+                    </span>
+                  )}
+                  {isNew(entry.date) && (
+                    <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                      NEW
                     </span>
                   )}
                 </div>
