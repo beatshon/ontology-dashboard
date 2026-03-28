@@ -447,6 +447,21 @@ export async function fetchSentimentTrend(days = 30): Promise<SentimentRecord[]>
 
 // ── 관계 네트워크 데이터 ─────────────────────────────────────────
 
+function calcDaysSince(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  return Math.floor((today.getTime() - target.getTime()) / 86400000);
+}
+
+function calcStrengthScore(count: number, lastContact: string, avgSentiment: number): number {
+  const frequencyScore = Math.min(count / 10, 1.0);
+  const daysSince = calcDaysSince(lastContact);
+  const recencyScore = Math.exp(-0.05 * daysSince);
+  const sentimentScore = (avgSentiment + 1) / 2;
+  return frequencyScore * recencyScore * sentimentScore;
+}
+
 export async function fetchRelationNetwork(): Promise<RelationNode[]> {
   const notion = getClient();
   const dbId = process.env.NOTION_GWANGYE_DB_ID;
@@ -454,7 +469,13 @@ export async function fetchRelationNetwork(): Promise<RelationNode[]> {
 
   try {
     let cursor: string | undefined;
-    const peopleMap: Record<string, { count: number; lastContact: string }> = {};
+    const peopleMap: Record<string, {
+      count: number;
+      lastContact: string;
+      sentimentSum: number;
+      sentimentCount: number;
+      category?: string;
+    }> = {};
 
     do {
       const res = await notion.databases.query({
@@ -473,20 +494,63 @@ export async function fetchRelationNetwork(): Promise<RelationNode[]> {
         if (name.length > 10) continue;
 
         const created = page.created_time.split("T")[0];
+
         if (!peopleMap[name]) {
-          peopleMap[name] = { count: 0, lastContact: created };
+          peopleMap[name] = {
+            count: 0,
+            lastContact: created,
+            sentimentSum: 0,
+            sentimentCount: 0,
+            category: extractSelect(page, "카테고리") ??
+                      extractSelect(page, "유형") ??
+                      extractSelect(page, "관계") ??
+                      undefined,
+          };
         }
+
         peopleMap[name].count += 1;
+
         if (created > peopleMap[name].lastContact) {
           peopleMap[name].lastContact = created;
         }
+
+        // 감정 속성이 있으면 수집 (없으면 neutral 0 처리)
+        const sentimentLabel = extractSelect(page, "감정");
+        if (sentimentLabel) {
+          const sentimentValue =
+            sentimentLabel === "긍정" ? 1.0 :
+            sentimentLabel === "부정" ? -1.0 :
+            0.0;
+          peopleMap[name].sentimentSum += sentimentValue;
+          peopleMap[name].sentimentCount += 1;
+        }
       }
+
       cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
     } while (cursor);
 
+    const today = new Date().toISOString().split("T")[0];
+
     return Object.entries(peopleMap)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.count - a.count);
+      .map(([name, data]) => {
+        const avgSentiment = data.sentimentCount > 0
+          ? data.sentimentSum / data.sentimentCount
+          : 0;
+        const daysSince = calcDaysSince(data.lastContact);
+        const strengthScore = calcStrengthScore(data.count, data.lastContact, avgSentiment);
+        const isDrifting = daysSince > 14 && avgSentiment < 0;
+
+        return {
+          name,
+          count: data.count,
+          lastContact: data.lastContact,
+          strengthScore,
+          avgSentiment,
+          category: data.category,
+          isDrifting,
+        };
+      })
+      .sort((a, b) => b.strengthScore - a.strengthScore);
   } catch (e) {
     console.error("[RelationNetwork] 오류:", e);
     return [];

@@ -56,6 +56,10 @@ export interface RelationNode {
   name: string;
   count: number;
   lastContact: string;
+  strengthScore: number;   // 0.0~1.0 관계 강도
+  avgSentiment: number;    // -1.0~1.0 감정 평균
+  category?: string;       // 동료/가족/친구/멘토/클라이언트
+  isDrifting: boolean;     // 드리프트 경고
 }
 
 export interface AchievementTrend {
