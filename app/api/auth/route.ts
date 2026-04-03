@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Set-Cookie": `${COOKIE_NAME}=${password};Path=/;HttpOnly;Secure;SameSite=Lax;Max-Age=${MAX_AGE}`,
+        "Set-Cookie": `${COOKIE_NAME}=${token};Path=/;HttpOnly;Secure;SameSite=Lax;Max-Age=${MAX_AGE}`,
       },
     });
   }

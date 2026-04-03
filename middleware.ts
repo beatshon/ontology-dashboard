@@ -11,9 +11,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 쿠키 체크
+  // 쿠키 체크 (토큰 존재 + 64자 hex)
   const cookie = req.cookies.get(COOKIE_NAME);
-  if (cookie?.value === PASSWORD) {
+  if (cookie?.value && cookie.value.length === 64 && /^[0-9a-f]+$/.test(cookie.value)) {
     return NextResponse.next();
   }
 

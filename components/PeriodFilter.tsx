@@ -1,3 +1,5 @@
+"use client";
+
 const PERIODS = [
   { key: "week", label: "이번 주" },
   { key: "month", label: "이번 달" },
@@ -34,15 +36,40 @@ export function getDateRange(period: PeriodKey): { start: string | null } {
 
 interface Props {
   current: PeriodKey;
+  onChange?: (period: PeriodKey) => void;
   basePath?: string;
 }
 
-export default function PeriodFilter({ current, basePath = "/" }: Props) {
+export default function PeriodFilter({ current, onChange, basePath = "/" }: Props) {
+  const handleClick = (key: PeriodKey) => {
+    if (onChange) {
+      onChange(key);
+      // Update URL without reload
+      const url = key === "all" ? basePath : `${basePath}?period=${key}`;
+      window.history.replaceState(null, "", url);
+    }
+  };
+
   return (
-    <div className="flex gap-1.5 flex-wrap">
+    <div className="flex gap-1.5 flex-wrap mb-4">
       {PERIODS.map(({ key, label }) => {
-        const href =
-          key === "all" ? basePath : `${basePath}?period=${key}`;
+        if (onChange) {
+          return (
+            <button
+              key={key}
+              onClick={() => handleClick(key)}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-200 btn-press ${
+                current === key
+                  ? "bg-[#333] text-white font-medium"
+                  : "bg-[#1a1a1a] text-[#666] hover:text-[#999] hover:bg-[#222]"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        }
+
+        const href = key === "all" ? basePath : `${basePath}?period=${key}`;
         return (
           <a
             key={key}

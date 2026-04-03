@@ -23,6 +23,7 @@ export interface NotionRecord {
   date?: string;
   category?: string;
   createdAt: string;
+  photoUrl?: string;
 }
 
 export interface Achievement extends NotionRecord {

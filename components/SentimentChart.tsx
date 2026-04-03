@@ -17,10 +17,12 @@ interface Props {
 
 interface DayPoint {
   date: string;
+  fullDate: string;
   score: number;
   count: number;
   emotions: string[];
   label: string;
+  emoji: string;
 }
 
 const LABEL_SCORE: Record<string, number> = {
@@ -29,11 +31,35 @@ const LABEL_SCORE: Record<string, number> = {
   "부정": -1,
 };
 
+const LABEL_EMOJI: Record<string, string> = {
+  "긍정": "\uD83D\uDE0A",
+  "중립": "\uD83D\uDE10",
+  "부정": "\uD83D\uDE14",
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function EmojiDot(props: any) {
+  const { cx, cy, payload } = props;
+  if (!cx || !cy || !payload?.emoji) return null;
+  return (
+    <text
+      x={cx}
+      y={cy}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={10}
+      style={{ pointerEvents: "none" }}
+    >
+      {payload.emoji}
+    </text>
+  );
+}
+
 export default function SentimentChart({ data }: Props) {
   if (data.length === 0) {
     return (
       <div className="rounded-2xl bg-[#1a1a1a] p-6">
-        <h2 className="text-lg font-bold mb-4">😊 감정 흐름</h2>
+        <h2 className="text-lg font-bold mb-4">감정 흐름</h2>
         <p className="text-gray-500 text-sm">아직 감정 데이터가 없어요.</p>
       </div>
     );
@@ -57,10 +83,12 @@ export default function SentimentChart({ data }: Props) {
     )[0];
     return {
       date: date.slice(5), // MM-DD
+      fullDate: date,
       score: Math.round(avg * 10) / 10,
       count: d.scores.length,
       emotions: [...new Set(d.emotions)],
       label: majority,
+      emoji: LABEL_EMOJI[majority] ?? "\uD83D\uDE10",
     };
   });
 
@@ -70,9 +98,26 @@ export default function SentimentChart({ data }: Props) {
   const negative = data.filter((d) => d.label === "부정").length;
   const neutral = total - positive - negative;
 
+  // Today's dominant emotion
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayPoint = points.find((p) => p.fullDate === todayStr);
+  const todayEmoji = todayPoint?.emoji ?? null;
+  const todayLabel = todayPoint?.label ?? null;
+
   return (
     <div className="rounded-2xl bg-[#1a1a1a] p-6">
-      <h2 className="text-lg font-bold mb-2">😊 감정 흐름</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-bold">감정 흐름</h2>
+        {todayEmoji && (
+          <div className="flex items-center gap-2 bg-[#222] rounded-xl px-3 py-1.5">
+            <span className="text-2xl sentiment-badge-pulse">{todayEmoji}</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-500">오늘</span>
+              <span className="text-xs text-gray-300">{todayLabel}</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Summary bar */}
       <div className="flex items-center gap-2 mb-4 text-xs text-gray-400">
@@ -95,9 +140,9 @@ export default function SentimentChart({ data }: Props) {
         <AreaChart data={points}>
           <defs>
             <linearGradient id="sentGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#4ade80" stopOpacity={0.4} />
-              <stop offset="50%" stopColor="#6b7280" stopOpacity={0.1} />
-              <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.4} />
+              <stop offset="0%" stopColor="#4ade80" stopOpacity={0.3} />
+              <stop offset="40%" stopColor="#a78bfa" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.3} />
             </linearGradient>
           </defs>
           <XAxis
@@ -118,7 +163,7 @@ export default function SentimentChart({ data }: Props) {
             contentStyle={{ background: "#262626", border: "none", borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: "#999" }}
             formatter={(value: number) => {
-              const emoji = value > 0 ? "😊 긍정" : value < 0 ? "😔 부정" : "😐 중립";
+              const emoji = value > 0 ? "\uD83D\uDE0A 긍정" : value < 0 ? "\uD83D\uDE14 부정" : "\uD83D\uDE10 중립";
               return [`${emoji} (${Math.abs(value).toFixed(1)})`, "감정"];
             }}
           />
@@ -128,6 +173,8 @@ export default function SentimentChart({ data }: Props) {
             stroke="#a78bfa"
             strokeWidth={2}
             fill="url(#sentGrad)"
+            dot={<EmojiDot />}
+            activeDot={{ r: 6, fill: "#a78bfa", stroke: "#1a1a1a", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>

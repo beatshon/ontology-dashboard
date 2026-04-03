@@ -71,6 +71,34 @@ function toRecord(page: PageObjectResponse): NotionRecord {
   };
 }
 
+// ── 이미지 블록 추출 ─────────────────────────────────────────────
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Notion 페이지의 첫 번째 이미지 블록 URL을 반환 (R2 CDN 또는 Telegram 사진) */
+async function fetchFirstImageBlock(pageId: string): Promise<string | undefined> {
+  const notion = getClient();
+  try {
+    const blocks = await notion.blocks.children.list({
+      block_id: pageId,
+      page_size: 10,
+    });
+    for (const block of blocks.results) {
+      if (!("type" in block) || block.type !== "image") continue;
+      const img = (block as { type: "image"; image: { type: string; external?: { url: string }; file?: { url: string } } }).image;
+      if (img.type === "external" && img.external?.url) {
+        return img.external.url;
+      }
+      if (img.type === "file" && img.file?.url) {
+        return img.file.url;
+      }
+    }
+  } catch {
+    // 블록 조회 실패 시 무시
+  }
+  return undefined;
+}
+
 // Day One 임포트 소스 태그로 식별
 // 임포트 시 본문에 📍(위치) 또는 🌤(날씨)가 포함되거나, "Day One" 마커가 있는 항목
 function isDayOneImport(page: PageObjectResponse): boolean {
@@ -112,27 +140,21 @@ export async function fetchAreaData(
   const filter = buildDateFilter(startDate);
 
   try {
-    const [recent, all] = await Promise.all([
-      notion.databases.query({
-        database_id: dbId,
-        sorts: [{ timestamp: "created_time", direction: "descending" }],
-        page_size: limit + 20,
-        ...(filter ? { filter } : {}),
-      }),
-      notion.databases.query({
-        database_id: dbId,
-        page_size: 100,
-        ...(filter ? { filter } : {}),
-      }),
-    ]);
+    // 단일 쿼리로 최근 레코드 + page_size로 총 건수 추정
+    const recent = await notion.databases.query({
+      database_id: dbId,
+      sorts: [{ timestamp: "created_time", direction: "descending" }],
+      page_size: limit + 20,
+      ...(filter ? { filter } : {}),
+    });
 
-    const records = (recent.results as PageObjectResponse[])
-      .filter((p) => !isDayOneImport(p))
-      .map(toRecord)
-      .slice(0, limit);
-    const totalFiltered = (all.results as PageObjectResponse[])
-      .filter((p) => !isDayOneImport(p)).length;
-    return { area, records, total: totalFiltered };
+    const allPages = recent.results as PageObjectResponse[];
+    const filtered = allPages.filter((p) => !isDayOneImport(p));
+    const records = filtered.slice(0, limit).map(toRecord);
+    // has_more가 있으면 100+로 추정, 없으면 실제 수
+    const total = recent.has_more ? Math.max(filtered.length + 50, 100) : filtered.length;
+
+    return { area, records, total };
   } catch {
     return { area, records: [], total: 0 };
   }

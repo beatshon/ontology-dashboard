@@ -108,31 +108,41 @@ export default async function AreaDetailPage({
                     className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 hover:border-[#3a3a3a] transition-colors"
                     style={{ borderLeftColor: area.color, borderLeftWidth: 3 }}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[#e5e5e5] font-medium leading-snug">
-                          {r.title}
-                        </p>
-                        {r.content && (
-                          <p className="text-xs text-[#555] mt-1.5 line-clamp-3">
-                            {r.content}
+                    <div className="flex items-start gap-3">
+                      {r.photoUrl && (
+                        <img
+                          src={r.photoUrl}
+                          alt=""
+                          loading="lazy"
+                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0 bg-[#222]"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-[#e5e5e5] font-medium leading-snug">
+                            {r.title}
                           </p>
-                        )}
-                        {r.category && (
-                          <span
-                            className="inline-block text-[11px] mt-2 px-2 py-0.5 rounded-full"
-                            style={{
-                              backgroundColor: area.color + "18",
-                              color: area.color,
-                            }}
-                          >
-                            {r.category}
-                          </span>
-                        )}
+                          {r.content && (
+                            <p className="text-xs text-[#555] mt-1.5 line-clamp-3">
+                              {r.content}
+                            </p>
+                          )}
+                          {r.category && (
+                            <span
+                              className="inline-block text-[11px] mt-2 px-2 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: area.color + "18",
+                                color: area.color,
+                              }}
+                            >
+                              {r.category}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-[#444] flex-shrink-0 mt-0.5">
+                          {formatDate(r.date || r.createdAt)}
+                        </span>
                       </div>
-                      <span className="text-[11px] text-[#444] flex-shrink-0 mt-0.5">
-                        {formatDate(r.date || r.createdAt)}
-                      </span>
                     </div>
                   </div>
                 ))}

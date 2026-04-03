@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useCountUp } from "@/hooks/useCountUp";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { AREAS } from "@/lib/areas";
 import { getDateRange } from "@/components/PeriodFilter";
 import type { PeriodKey } from "@/components/PeriodFilter";
@@ -28,6 +29,7 @@ import DayOneArchive from "@/components/DayOneArchive";
 import RecentTimeline from "@/components/RecentTimeline";
 import YouTubeSection from "@/components/YouTubeSection";
 import SearchBar from "@/components/SearchBar";
+import type { SearchBarHandle } from "@/components/SearchBar";
 import TitleBadge from "@/components/TitleBadge";
 import Navigation from "@/components/Navigation";
 import TodayHighlight from "@/components/TodayHighlight";
@@ -39,6 +41,7 @@ import EntityGraph from "@/components/EntityGraph";
 import CrossAreaAnalysis from "@/components/CrossAreaAnalysis";
 import LifeNarrative from "@/components/LifeNarrative";
 import OnThisDay from "@/components/OnThisDay";
+import ErrorState from "@/components/ErrorState";
 
 type TabKey = "today" | "records" | "analysis" | "growth";
 
@@ -169,8 +172,13 @@ function LoadingCard({ title }: { title: string }) {
   );
 }
 
-function QuickRecordFAB() {
-  const [open, setOpen] = useState(false);
+function QuickRecordFAB({ externalOpen, onClose }: { externalOpen?: boolean; onClose?: () => void }) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen || internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    if (!v && onClose) onClose();
+  };
   const [area, setArea] = useState<string>("나");
   const [text, setText] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
@@ -324,6 +332,8 @@ function QuickRecordFAB() {
 export default function DashboardClient() {
   // Tab state with URL hash routing
   const [activeTab, setActiveTab] = useState<TabKey>("today");
+  const searchBarRef = useRef<SearchBarHandle>(null);
+  const [fabOpen, setFabOpen] = useState(false);
 
   const handleTabChange = useCallback((tab: TabKey) => {
     setActiveTab(tab);
@@ -332,6 +342,20 @@ export default function DashboardClient() {
       window.history.replaceState(null, "", tabDef.hash);
     }
   }, []);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onTabChange: handleTabChange,
+    onSearchFocus: useCallback(() => {
+      // Switch to records tab first if not there
+      if (searchBarRef.current) {
+        handleTabChange("records");
+        // Wait for render then focus
+        setTimeout(() => searchBarRef.current?.focus(), 100);
+      }
+    }, [handleTabChange]),
+    onQuickRecord: useCallback(() => setFabOpen(true), []),
+  });
 
   // Read initial tab from URL hash
   useEffect(() => {
@@ -363,35 +387,56 @@ export default function DashboardClient() {
   const [sentimentData, setSentimentData] = useState<SentimentRecord[] | null>(null);
   const [relationData, setRelationData] = useState<RelationNode[] | null>(null);
   const [achievementTrend, setAchievementTrend] = useState<AchievementTrend[] | null>(null);
+  const [fetchError, setFetchError] = useState(false);
 
   // 캐시 우선 fetch (2초 타임아웃) → 실패 시 직접 API
-  const fetchWithTimeout = (url: string, ms = 2000) => {
+  const fetchWithTimeout = useCallback((url: string, ms = 2000) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), ms);
     return fetch(url, { signal: controller.signal }).then((r) => { clearTimeout(timer); return r.ok ? r.json() : Promise.reject(); }).catch(() => { clearTimeout(timer); return Promise.reject(); });
-  };
-  const fetchCacheFirst = (cacheUrl: string, fallbackUrl: string) =>
-    fetchWithTimeout(cacheUrl, 2000).catch(() => fetch(fallbackUrl).then((r) => r.json()));
+  }, []);
+  const fetchCacheFirst = useCallback((cacheUrl: string, fallbackUrl: string) =>
+    fetchWithTimeout(cacheUrl, 2000).catch(() => fetch(fallbackUrl).then((r) => r.json())),
+  [fetchWithTimeout]);
 
   const CACHE = "https://api.againline.kr";
-  const fetchAll = () => {
+  const fetchAll = useCallback(() => {
+    setFetchError(false);
     const qs = start ? `?start=${start}` : "";
-    fetch(`/api/areas${qs}`).then((r) => r.json()).then(setAreasData).catch(() => setAreasData([]));
-    fetch(`/api/stats${qs}`)
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => setStats({ achievements: [], trend: [], monthlyCounts: [], heatmapData: [], monthlyComparison: [] }));
-    fetchCacheFirst(`${CACHE}/api/cache/sentiment`, "/api/sentiment").then(setSentimentData).catch(() => setSentimentData([]));
-    fetchCacheFirst(`${CACHE}/api/cache/relation`, "/api/relation").then(setRelationData).catch(() => setRelationData([]));
-    fetchCacheFirst(`${CACHE}/api/cache/achievement-trend`, "/api/achievement-trend").then(setAchievementTrend).catch(() => setAchievementTrend([]));
-  };
+
+    // Parallelize all API calls with Promise.allSettled
+    const areasPromise = fetch(`/api/areas${qs}`).then((r) => r.json());
+    const statsPromise = fetch(`/api/stats${qs}`).then((r) => r.json());
+    const sentimentPromise = fetchCacheFirst(`${CACHE}/api/cache/sentiment`, "/api/sentiment");
+    const relationPromise = fetchCacheFirst(`${CACHE}/api/cache/relation`, "/api/relation");
+    const achievementPromise = fetchCacheFirst(`${CACHE}/api/cache/achievement-trend`, "/api/achievement-trend");
+
+    Promise.allSettled([areasPromise, statsPromise, sentimentPromise, relationPromise, achievementPromise])
+      .then(([areasResult, statsResult, sentimentResult, relationResult, achievementResult]) => {
+        if (areasResult.status === "fulfilled") {
+          setAreasData(areasResult.value);
+        } else {
+          setAreasData([]);
+          setFetchError(true);
+        }
+
+        if (statsResult.status === "fulfilled") {
+          setStats(statsResult.value);
+        } else {
+          setStats({ achievements: [], trend: [], monthlyCounts: [], heatmapData: [], monthlyComparison: [] });
+        }
+
+        setSentimentData(sentimentResult.status === "fulfilled" ? sentimentResult.value : []);
+        setRelationData(relationResult.status === "fulfilled" ? relationResult.value : []);
+        setAchievementTrend(achievementResult.status === "fulfilled" ? achievementResult.value : []);
+      });
+  }, [start, fetchCacheFirst]);
 
   useEffect(() => {
     fetchAll();
     const interval = setInterval(fetchAll, 5 * 60 * 1000); // 5분
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [start]);
+  }, [fetchAll]);
 
   const now = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -452,7 +497,18 @@ export default function DashboardClient() {
 
       <TitleBadge />
       <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
-      <PeriodFilter current={period} />
+      <PeriodFilter current={period} onChange={setPeriod} />
+
+      {/* Error banner */}
+      {fetchError && (
+        <div className="mb-4">
+          <ErrorState
+            compact
+            message="일부 데이터를 불러오지 못했어요."
+            onRetry={fetchAll}
+          />
+        </div>
+      )}
 
       {/* Tab content with slide transition */}
       <div key={activeTab}>
@@ -504,7 +560,7 @@ export default function DashboardClient() {
         {/* Tab 2: 기록 (Records) */}
         {activeTab === "records" && (
           <div className="tab-panel">
-            <SearchBar />
+            <SearchBar ref={searchBarRef} />
             <div className="mt-4 sm:mt-6">
               <RecentTimeline />
             </div>
@@ -607,7 +663,19 @@ export default function DashboardClient() {
       </div>
 
       {/* Floating Action Button */}
-      <QuickRecordFAB />
+      <QuickRecordFAB externalOpen={fabOpen} onClose={() => setFabOpen(false)} />
+
+      {/* Keyboard shortcut hints (desktop only) */}
+      <div className="hidden sm:block fixed bottom-6 left-6 z-40">
+        <div className="flex items-center gap-2 text-[10px] text-gray-700">
+          <kbd className="bg-[#1a1a1a] border border-[#333] rounded px-1 py-0.5">1-4</kbd>
+          <span>탭</span>
+          <kbd className="bg-[#1a1a1a] border border-[#333] rounded px-1 py-0.5 ml-2">&#8984;K</kbd>
+          <span>검색</span>
+          <kbd className="bg-[#1a1a1a] border border-[#333] rounded px-1 py-0.5 ml-2">&#8984;N</kbd>
+          <span>기록</span>
+        </div>
+      </div>
     </main>
   );
 }

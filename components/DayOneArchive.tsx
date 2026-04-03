@@ -34,11 +34,13 @@ export default function DayOneArchive() {
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    // 캐시 API 우선, 실패 시 직접 Notion API
-    fetch("https://api.againline.kr/api/cache/dayone")
-      .then((r) => r.ok ? r.json() : Promise.reject())
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    fetch("https://api.againline.kr/api/cache/dayone", { signal: controller.signal })
+      .then((r) => { clearTimeout(timer); return r.ok ? r.json() : Promise.reject(); })
       .then((d) => setEntries(d.entries || []))
       .catch(() => {
+        clearTimeout(timer);
         fetch("/api/dayone")
           .then((r) => r.json())
           .then((d) => setEntries(d.entries || []))
@@ -58,7 +60,8 @@ export default function DayOneArchive() {
   if (entries.length === 0) return null;
 
   const withPhoto = entries.filter((e) => e.photoUrl);
-  const displayed = showAll ? entries : entries.slice(0, 1);
+  const withoutPhoto = entries.filter((e) => !e.photoUrl);
+  const displayedTextEntries = showAll ? withoutPhoto : withoutPhoto.slice(0, 2);
 
   return (
     <div className="rounded-2xl bg-[#1a1a1a] p-4 sm:p-6">
@@ -70,27 +73,71 @@ export default function DayOneArchive() {
       </div>
       <p className="text-xs text-gray-500 mb-4">최신순</p>
 
-      <div className="space-y-3">
-        {displayed.map((entry, i) => (
-          <a
-            key={`${entry.title}-${i}`}
-            href={entry.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group rounded-xl bg-[#222] border border-gray-800/40 overflow-hidden hover:bg-[#2a2a2a] hover:border-gray-600/50 transition"
+      {/* 사진 가로 스크롤 갤러리 */}
+      {withPhoto.length > 0 && (
+        <div className="relative mb-4">
+          <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {entry.photoUrl && (
-              <div className="w-full h-40 overflow-hidden bg-[#1a1a1a]">
+            {withPhoto.map((entry, i) => (
+              <a
+                key={`photo-${entry.title}-${i}`}
+                href={entry.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 snap-start group relative w-56 h-36 sm:w-64 sm:h-40 rounded-xl overflow-hidden"
+              >
                 <img
-                  src={entry.photoUrl}
+                  src={entry.photoUrl!}
                   alt=""
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).closest('a')!.style.display = 'none'; }}
                 />
-              </div>
-            )}
+                {/* 그라디언트 오버레이 */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                {/* 하단 텍스트 */}
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[10px] text-gray-300">
+                      {AREA_EMOJI[entry.area] || "📝"} {entry.area}
+                    </span>
+                    {entry.sentiment && (
+                      <span className="text-[10px]">
+                        {SENTIMENT_EMOJI[entry.sentiment] || ""}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-medium text-white truncate">
+                    {entry.title}
+                  </h3>
+                  <span className="text-[10px] text-gray-400">{entry.date}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+          {/* 스와이프 힌트 (모바일) */}
+          {withPhoto.length > 2 && (
+            <div className="sm:hidden flex justify-center mt-2">
+              <span className="text-[10px] text-gray-600 animate-pulse">
+                ← 스와이프하여 더 보기 →
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
-            <div className="p-3">
+      {/* 사진 없는 엔트리 목록 */}
+      {displayedTextEntries.length > 0 && (
+        <div className="space-y-2">
+          {displayedTextEntries.map((entry, i) => (
+            <a
+              key={`text-${entry.title}-${i}`}
+              href={entry.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block group rounded-xl bg-[#222] border border-gray-800/40 overflow-hidden hover:bg-[#2a2a2a] hover:border-gray-600/50 transition p-3"
+            >
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] text-gray-600">{entry.date}</span>
                 <span className="text-[10px] text-gray-600">
@@ -118,12 +165,12 @@ export default function DayOneArchive() {
                   📍 {entry.location}
                 </span>
               )}
-            </div>
-          </a>
-        ))}
-      </div>
+            </a>
+          ))}
+        </div>
+      )}
 
-      {entries.length > 1 && !showAll && (
+      {entries.length > 3 && !showAll && (
         <button
           onClick={() => setShowAll(true)}
           className="mt-3 w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 transition"

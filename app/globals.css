@@ -6,6 +6,10 @@
   --bg: #0d0d0d;
   --card: #1a1a1a;
   --border: #2a2a2a;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --warm-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --card-radius: 20px;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1);
 }
 
 body {
@@ -24,3 +28,455 @@ body {
   background: #333;
   border-radius: 3px;
 }
+
+/* Hide horizontal scrollbar */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ===== Toss/Kakao Card System ===== */
+.toss-card {
+  background: #1a1a1a;
+  border-radius: var(--card-radius);
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.4s var(--spring), box-shadow 0.3s ease;
+}
+
+.toss-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15);
+}
+
+@media (min-width: 640px) {
+  .toss-card {
+    padding: 24px;
+  }
+}
+
+/* ===== Card fade-in animation ===== */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-fade-in {
+  animation: cardFadeIn 0.4s ease-out both;
+}
+
+/* Skeleton to content transition */
+.animate-pulse {
+  transition: opacity 0.3s ease-out;
+}
+
+/* ===== Achievement sparkle / glow ===== */
+@keyframes sparkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; text-shadow: 0 0 8px currentColor; }
+}
+
+.achievement-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 0 0 12px 2px rgba(251, 191, 36, 0.15); }
+}
+
+.achievement-glow {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Achievement ring animation */
+@keyframes ringDraw {
+  from { stroke-dashoffset: 78.5; }
+}
+
+.achievement-ring {
+  animation: ringDraw 0.8s ease-out both;
+}
+
+/* ===== Sentiment badge pulse ===== */
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.sentiment-badge-pulse {
+  animation: badgePulse 2s ease-in-out 1;
+}
+
+/* ===== Scroll-triggered animations ===== */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cards within grid layouts auto-animate */
+.grid > div,
+.grid > a {
+  animation: slideUp 0.5s ease-out both;
+}
+
+.grid > div:nth-child(1) { animation-delay: 0ms; }
+.grid > div:nth-child(2) { animation-delay: 60ms; }
+.grid > div:nth-child(3) { animation-delay: 120ms; }
+.grid > div:nth-child(4) { animation-delay: 180ms; }
+.grid > div:nth-child(5) { animation-delay: 240ms; }
+.grid > div:nth-child(6) { animation-delay: 300ms; }
+.grid > div:nth-child(7) { animation-delay: 360ms; }
+.grid > div:nth-child(8) { animation-delay: 420ms; }
+
+/* ===== Smooth hover transitions for all cards ===== */
+.rounded-2xl {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s ease;
+}
+
+/* ===== Button press effect ===== */
+.btn-press {
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+.btn-press:active {
+  transform: scale(0.95);
+}
+
+/* ===== Card hover border glow ===== */
+.rounded-2xl:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== Loading skeleton shimmer ===== */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #222 25%,
+    #2a2a2a 37%,
+    #333 50%,
+    #2a2a2a 63%,
+    #222 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ===== Counter smooth transitions ===== */
+.counter-transition {
+  transition: color 0.3s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Streak glow animation ===== */
+@keyframes streakPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; text-shadow: 0 0 12px rgba(251, 146, 60, 0.6); }
+}
+
+.streak-glow {
+  animation: streakPulse 2s ease-in-out infinite;
+}
+
+.streak-enter {
+  animation: cardFadeIn 0.5s ease-out both;
+  animation-delay: 0.3s;
+}
+
+/* ===== Radar pulse animation ===== */
+@keyframes radarPulse {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.radar-loading {
+  opacity: 0;
+}
+
+.radar-loaded {
+  animation: radarPulse 0.6s ease-out both;
+}
+
+/* ===== Stats chart glow dot ===== */
+@keyframes dotGlow {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+  50% { box-shadow: 0 0 6px 2px currentColor; }
+}
+
+.stats-glow-dot {
+  animation: dotGlow 2s ease-in-out infinite;
+}
+
+/* ===== Navigation section fade in ===== */
+@keyframes navSectionFadeIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.nav-section-fade-in {
+  animation: navSectionFadeIn 0.3s ease-out both;
+}
+
+/* ===== Navigation sticky active state ===== */
+.nav-sticky-active {
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Weekly insight enter ===== */
+.weekly-insight-enter {
+  animation: cardFadeIn 0.5s ease-out both;
+  animation-delay: 0.15s;
+}
+
+/* ===== Tab content slide transition ===== */
+@keyframes tabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tabSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+.tab-panel {
+  animation: tabSlideIn 0.35s var(--spring) both;
+}
+
+/* ===== Mood Check-in ===== */
+.mood-checkin-enter {
+  animation: cardFadeIn 0.4s ease-out both;
+  animation-delay: 0.1s;
+}
+
+.mood-input-enter {
+  animation: cardFadeIn 0.25s ease-out both;
+}
+
+.mood-selected {
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.15);
+}
+
+@keyframes moodSavedPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.mood-saved-badge {
+  animation: moodSavedPop 0.3s ease-out both;
+}
+
+/* ===== Weekly Report ===== */
+.weekly-report-enter {
+  animation: cardFadeIn 0.5s ease-out both;
+  animation-delay: 0.1s;
+}
+
+/* ===== Milestone Tracker ===== */
+.milestone-enter {
+  animation: cardFadeIn 0.5s ease-out both;
+}
+
+@keyframes milestoneGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); }
+  50% { box-shadow: 0 0 12px 2px rgba(167, 139, 250, 0.2); }
+}
+
+.milestone-earned {
+  animation: milestoneGlow 3s ease-in-out infinite;
+}
+
+@keyframes progressGrow {
+  from { width: 0; }
+}
+
+.milestone-progress-bar {
+  animation: progressGrow 1s ease-out both;
+  animation-delay: 0.3s;
+}
+
+/* ===== Sparkline ===== */
+.sparkline-enter {
+  animation: cardFadeIn 0.3s ease-out both;
+  animation-delay: 0.2s;
+}
+
+/* ===== FAB (Floating Action Button) ===== */
+@keyframes fabPulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(167, 139, 250, 0.3); }
+  50% { box-shadow: 0 4px 20px rgba(167, 139, 250, 0.5); }
+}
+
+.fab-pulse {
+  animation: fabPulse 3s ease-in-out infinite;
+}
+
+.fab-modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.15s ease-out both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===== Bottom Sheet Modal (Toss-style) ===== */
+@keyframes bottomSheetSlideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fab-modal-enter {
+  animation: bottomSheetSlideUp 0.35s var(--spring) both;
+}
+
+@media (min-width: 640px) {
+  .fab-modal-enter {
+    animation: modalSlideUp 0.3s var(--spring) both;
+  }
+}
+
+/* ===== Grayscale filter for unearned milestones ===== */
+.grayscale {
+  filter: grayscale(1);
+}
+
+/* ===== Smooth scroll ===== */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+/* ===== Toss Spring Hover ===== */
+.spring-hover {
+  transition: transform 0.4s var(--spring), box-shadow 0.3s ease;
+}
+
+.spring-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.spring-hover:active {
+  transform: scale(0.98);
+}
+
+/* ===== Toss Hero Card ===== */
+.hero-gradient {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #f59e0b22 100%);
+}
+
+/* ===== Warm accent borders ===== */
+.warm-border-left {
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, var(--area-color) 0%, var(--area-color-dim) 100%) 1;
+}
+
+/* ===== Bottom Tab Bar (Toss-style) ===== */
+.bottom-tab-active {
+  animation: tabIconPop 0.3s var(--spring) both;
+}
+
+@keyframes tabIconPop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* ===== Entity Graph ===== */
+.entity-graph-enter {
+  animation: cardFadeIn 0.5s ease-out both;
+}
+
+@keyframes nodeAppear {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.graph-node {
+  animation: nodeAppear 0.4s var(--spring) both;
+}
+
+.graph-node:nth-child(1) { animation-delay: 0ms; }
+.graph-node:nth-child(2) { animation-delay: 50ms; }
+.graph-node:nth-child(3) { animation-delay: 100ms; }
+.graph-node:nth-child(4) { animation-delay: 150ms; }
+.graph-node:nth-child(5) { animation-delay: 200ms; }
+.graph-node:nth-child(6) { animation-delay: 250ms; }
+.graph-node:nth-child(7) { animation-delay: 300ms; }
+.graph-node:nth-child(8) { animation-delay: 350ms; }
+.graph-node:nth-child(9) { animation-delay: 400ms; }
+.graph-node:nth-child(10) { animation-delay: 450ms; }
+
+.graph-node:hover {
+  filter: brightness(1.3);
+  cursor: pointer;
+}
+
+@keyframes edgeDraw {
+  from { stroke-dashoffset: 200; }
+  to { stroke-dashoffset: 0; }
+}
+
+.graph-edge {
+  stroke-dasharray: 200;
+  animation: edgeDraw 0.8s ease-out both;
+  animation-delay: 0.3s;
+}
+
+/* ===== Warm accent colors ===== */
+.warm-accent-green { --warm: #86efac; }
+.warm-accent-blue { --warm: #93c5fd; }
+.warm-accent-pink { --warm: #f9a8d4; }
+.warm-accent-purple { --warm: #c4b5fd; }
+.warm-accent-orange { --warm: #fdba74; }
+.warm-accent-rose { --warm: #fda4af; }
+.warm-accent-yellow { --warm: #fde047; }

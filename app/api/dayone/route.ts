@@ -60,27 +60,24 @@ export async function GET(request: Request) {
   const entries: DayOneEntry[] = [];
   const byArea: Record<string, number> = {};
 
-  // 모든 DB에서 최근 기록 조회 (last_edited_time 기준)
-  for (const [area, dbId] of dbIds) {
-    if (!dbId) continue;
-
+  // 모든 DB를 병렬로 최근 기록 조회 (3개씩 배치)
+  const fetchArea = async (area: string, dbId: string) => {
+    const areaEntries: DayOneEntry[] = [];
     try {
       const res = await notion.databases.query({
         database_id: dbId,
         sorts: [{ timestamp: "last_edited_time", direction: "descending" }],
-        page_size: 10,
+        page_size: 5,
       });
 
-      for (const page of res.results as PageObjectResponse[]) {
+      // 페이지 목록에서 메타 정보만 먼저 수집
+      const pages = (res.results as PageObjectResponse[]).filter(p => extractTitle(p));
+
+      // 블록 조회는 최근 3개만 (속도 우선)
+      for (const page of pages.slice(0, 3)) {
         const title = extractTitle(page);
-        if (!title) continue;
-
-        // 이미 같은 제목이 있으면 스킵
-        if (entries.some((e) => e.title === title)) continue;
-
         const sentiment = extractSelect(page, "감정");
 
-        // 본문 첫 블록 가져오기
         let content = "";
         let contentKey = "";
         let photoUrl: string | null = null;
@@ -94,7 +91,6 @@ export async function GET(request: Request) {
           for (const block of blocks.results) {
             if ("type" in block) {
               if (block.type === "image" && "image" in block) {
-                // Notion에 저장된 이미지
                 const img = block.image;
                 if ("external" in img && img.external?.url) {
                   photoUrl = img.external.url;
@@ -114,7 +110,6 @@ export async function GET(request: Request) {
           }
         } catch { /* skip */ }
 
-        // 정적 매핑에서 사진 URL 보완
         if (!photoUrl && contentKey) {
           const meta = textToMeta.get(contentKey);
           if (meta?.hasPhoto) {
@@ -122,26 +117,29 @@ export async function GET(request: Request) {
           }
         }
 
-        // Day One 기록만 필터: 이미지 또는 위치 정보가 있는 것만
         if (!photoUrl && !location) continue;
 
         const dateStr = page.last_edited_time.slice(0, 10);
         byArea[area] = (byArea[area] || 0) + 1;
 
-        entries.push({
-          title,
-          area,
-          date: dateStr,
-          sentiment,
+        areaEntries.push({
+          title, area, date: dateStr, sentiment,
           content: content.slice(0, 150),
-          url: page.url,
-          location,
-          photoUrl,
+          url: page.url, location, photoUrl,
         });
       }
     } catch { /* skip */ }
+    return areaEntries;
+  };
 
-    await new Promise((r) => setTimeout(r, 400));
+  // 4개씩 병렬 배치
+  const validDbs = dbIds.filter(([, id]) => id) as [string, string][];
+  const batch1 = await Promise.all(validDbs.slice(0, 4).map(([a, id]) => fetchArea(a, id)));
+  const batch2 = await Promise.all(validDbs.slice(4).map(([a, id]) => fetchArea(a, id)));
+  for (const batch of [...batch1, ...batch2]) {
+    for (const e of batch) {
+      if (!entries.some((x) => x.title === e.title)) entries.push(e);
+    }
   }
 
   // 날짜순 정렬 (최신순)

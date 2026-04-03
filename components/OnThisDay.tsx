@@ -59,9 +59,15 @@ export default function OnThisDay() {
         <h3 className="text-sm font-semibold text-white/60 mb-2">
           On This Day ({dateLabel})
         </h3>
-        <p className="text-xs text-white/40">
-          이 날의 과거 기록이 없습니다
-        </p>
+        <div className="flex flex-col items-center justify-center py-4 text-center">
+          <span className="text-2xl mb-2 opacity-50">📅</span>
+          <p className="text-xs text-white/40">
+            이 날의 과거 기록이 아직 없어요
+          </p>
+          <p className="text-[10px] text-white/25 mt-1">
+            기록을 쌓으면 과거의 오늘을 되돌아볼 수 있어요
+          </p>
+        </div>
       </div>
     );
   }
